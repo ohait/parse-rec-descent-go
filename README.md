@@ -21,6 +21,6 @@ g.Add("lit", `/\d+/`, func(v string) any { return Lit{v} })
 
 err := g.Build()
 
-out, err := g.Parse("add", []byte("1+2+3"))
+out, err := g.Parse("add", []byte("1+2+3")) // returns ❲❲1+2❳+3❳
 ```
 
