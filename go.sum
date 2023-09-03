@@ -1,0 +1,4 @@
+github.com/Aize-Public/forego v0.1.0 h1:dn5wROx9yCM2F7rdwUzyZG2XFOMbdUMfzvPWv3rpBIs=
+github.com/Aize-Public/forego v0.1.0/go.mod h1:ZLQXRs9m/koSy9oPC4puoWMcWdwRLnCWx2EVJD28QqI=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
