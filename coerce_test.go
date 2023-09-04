@@ -10,13 +10,15 @@ import (
 func TestCoerce(t *testing.T) {
 	s := "str"
 
-	v := coerce(reflect.ValueOf(s), reflect.TypeOf(s))
+	v, err := coerce(reflect.ValueOf(s), reflect.TypeOf(s))
+	test.NoError(t, err)
 	test.EqualsGo(t, reflect.TypeOf(s), v.Type())
 
 	{
 		s := []any{"1", "2"}
 		out := []string{}
-		v := coerce(reflect.ValueOf(s), reflect.TypeOf(out))
+		v, err := coerce(reflect.ValueOf(s), reflect.TypeOf(out))
+		test.NoError(t, err)
 		test.EqualsGo(t, reflect.TypeOf(out), v.Type())
 	}
 }

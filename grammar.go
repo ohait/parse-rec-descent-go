@@ -1,48 +1,65 @@
 package parse
 
 import (
-	"log"
+	"fmt"
 	"regexp"
-	"strings"
+	"runtime"
+	"sync"
+	"sync/atomic"
 
 	"github.com/Aize-Public/forego/ctx"
 )
 
 type Grammar struct {
-	alts map[string]Alt
+	m sync.Mutex
+
+	// Trailing regexp
+	End *regexp.Regexp
+
+	built atomic.Bool
+	alts  map[string]Alt
+	Log   func(f string, args ...any)
 }
 
-func (this *Grammar) MustAdd(name string, directives string, action any) {
-	err := this.Add(name, directives, action)
-	if err != nil {
-		panic(err)
-	}
-}
+var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
+var CommentsAndWhitespaces = regexp.MustCompile(`(\s|//[^\n]*\n?)*`)
 
 // Add a new production with the given name, directive and action.
 // action must be a function with signatures compatible with the directive and return type same as the other production with the same name
-func (this *Grammar) Add(name string, directive string, action any) error {
+// panics if anything is wrong (you normally don't want to handle the error, since can be seen as a compile time error)
+func (this *Grammar) Add(name string, directives string, action any) *Prod {
+	if this.Log != nil {
+		this.Log("adding %s: %s", name, directives)
+	}
+	this.built.Store(false)
 	if this.alts == nil {
 		this.alts = map[string]Alt{}
 	}
+	_, file, line, _ := runtime.Caller(1)
 	p := &Prod{
-		G:         this,
+		g:         this,
 		Name:      name,
-		Directive: directive,
+		Directive: directives,
+		src:       fmt.Sprintf("%s:%d", file, line),
 	}
 	p.Return(action)
 	list := append(this.alts[name], p)
-	if list[0].retType != p.retType {
-		return ctx.NewErrorf(nil, "first production returns %v, while this one %v", list[0].retType, p.retType)
-	}
 	this.alts[name] = list
-	return nil
+	return p
 }
 
-// build the grammar, returns an error if
+// build the grammar, returns an error if the grammar is not complete
 func (this *Grammar) Build() error {
+	this.m.Lock()
+	defer this.m.Unlock()
+	if this.Log != nil {
+		this.Log("building...")
+	}
+	this.built.Store(true)
 	for name, alt := range this.alts {
-		log.Printf("build[%q]", name)
+		if this.Log != nil {
+			this.Log("build[%q]", name)
+		}
 		for _, p := range alt {
 			err := p.build(this)
 			if err != nil {
@@ -53,91 +70,27 @@ func (this *Grammar) Build() error {
 	return nil
 }
 
-func (this *Grammar) Parse(name string, src []byte) (any, error) {
-	p := Pos{
-		G:   this,
-		src: src,
+// parse the given text, optionally compile the grammar if needed
+func (this *Grammar) Parse(name string, text []byte) (any, error) {
+	if !this.built.Load() { // already built
+		err := this.Build()
+		if err != nil {
+			return nil, err
+		}
 	}
-	alt := this.alts[name]
-	out, err := p.ConsumeAlt([]any{}, alt)
+	p := Pos{
+		g:   this,
+		src: text,
+	}
+	out, err := p.ConsumeAlt(this.alts[name])
 	if err != nil {
 		return nil, err
+	}
+	if this.End != nil {
+		p.IgnoreRE(this.End)
 	}
 	if p.Rem(10) != "" {
 		return out, ctx.NewErrorf(nil, "unparsed: %q", p.Rem(80))
 	}
 	return out, nil
-}
-
-func (this *Prod) build(g *Grammar) error {
-	//log.Printf("prod[%q]...", this.Name)
-	this.Directive = strings.TrimSpace(this.Directive)
-	if this.Directive == "" {
-		this.act = func(p *Pos) ([]any, error) {
-			return nil, nil
-		}
-		return nil
-	}
-
-	var out []func(arg []any, p *Pos) (any, error)
-	d := this.Directive
-	for len(d) > 0 {
-		//log.Printf("parsing %q", d)
-		switch d[0] {
-
-		case '[': // TODO
-			re := regexp.MustCompile(`\[(.*)\]`)
-			m := re.FindString(d)
-			panic(m[1])
-
-		case '/':
-			re := regexp.MustCompile(`/(([^/]|/.)*)/`)
-			m := re.FindStringSubmatch(d)
-			if m[0] == "" {
-				return ctx.NewErrorf(nil, "invalid directive %q", d)
-			}
-			d = d[len(m[0]):]
-			re, err := regexp.Compile(m[1])
-			if err != nil {
-				return ctx.NewErrorf(nil, "invalid directive %q: %v", m[1], err)
-			}
-			//log.Printf("prod[%q]: /%s/", this.Name, re)
-			out = append(out, func(arg []any, p *Pos) (any, error) {
-				return p.ConsumeRE(re)
-			})
-
-		case ' ', '\t', '\n', '\r': // ignore whitespace
-			d = d[1:]
-
-		default: // by default, we assume it's the production name
-			re := regexp.MustCompile(`(\w+)`)
-			m := re.FindStringSubmatch(d)
-			if m == nil {
-				return ctx.NewErrorf(nil, "invalid directive: %q", d)
-			}
-			d = d[len(m[0]):]
-			name := m[1]
-			alt := g.alts[name]
-			if alt != nil {
-				out = append(out, func(arg []any, p *Pos) (any, error) {
-					return p.ConsumeAlt(arg, alt)
-				})
-			} else {
-				return ctx.NewErrorf(nil, "unresolved directive: %q", name)
-			}
-		}
-	}
-
-	this.act = func(p *Pos) ([]any, error) {
-		list := []any{}
-		for _, f := range out {
-			out, err := f(list, p)
-			if err != nil {
-				return nil, err
-			}
-			list = append(list, out)
-		}
-		return list, nil
-	}
-	return nil
 }

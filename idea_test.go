@@ -25,7 +25,6 @@ type Lit struct {
 }
 
 func (this Lit) String() string {
-	//return fmt.Sprintf("❲%v❳", this.Val)
 	return fmt.Sprintf("%v", this.Val)
 }
 
