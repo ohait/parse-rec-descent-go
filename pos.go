@@ -17,7 +17,8 @@ type Pos struct {
 
 func (this *Pos) Log(f string, args ...any) {
 	if this.g.Log != nil {
-		this.g.Log("%s| %s",
+		this.g.Log("%-11q %s  %s",
+			this.Rem(10),
 			strings.Join(this.stack, " "),
 			fmt.Sprintf(f, args...),
 		)
@@ -35,7 +36,7 @@ func (this *Pos) Rem(max int) string {
 func (this *Pos) IgnoreRE(re *regexp.Regexp) error {
 	m := re.Find(this.src[this.at:])
 	if m == nil {
-		return ctx.NewErrorf(nil, "expected /%v/ got %s", re, this.Rem(80))
+		return ctx.NewErrorf(nil, "expected /%v/", re)
 	}
 	this.at += len(m)
 	if len(m) > 0 {
@@ -47,7 +48,7 @@ func (this *Pos) IgnoreRE(re *regexp.Regexp) error {
 func (this *Pos) ConsumeRE(re *regexp.Regexp) (string, error) {
 	m := re.FindIndex(this.src[this.at:])
 	if m == nil {
-		this.Log("FAIL /%v/ at %s", re, this.Rem(30))
+		this.Log("❌ FAIL /%v/", re)
 		return "", ctx.NewErrorf(nil, "expected /%v/ got %s", re, this.Rem(80))
 	}
 	if m[0] != 0 {
@@ -55,7 +56,7 @@ func (this *Pos) ConsumeRE(re *regexp.Regexp) (string, error) {
 	}
 	out := this.src[this.at : this.at+m[1]]
 	this.at += m[1]
-	this.Log("CONSUMED %q, rem %q", out, this.Rem(30))
+	this.Log("✅ CONSUMED %q", out)
 	return string(out), nil
 }
 
@@ -81,7 +82,7 @@ func (this *Pos) ConsumeAlt(alt Alt) (any, error) {
 		} else {
 			this.push(fmt.Sprintf("%s", prod.Name))
 		}
-		this.Log("trying <%s> %s (%q)", prod.Name, prod.Directive, this.Rem(30))
+		this.Log("trying `%s`", prod.Directive)
 		out, err := prod.exec(this)
 		if err == nil {
 			this.pop()

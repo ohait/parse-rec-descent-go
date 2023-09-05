@@ -14,15 +14,15 @@ func TestRegex(t *testing.T) {
 			g:         &g,
 			Directive: `/\S+/`,
 		}
-		err := p.build(nil)
+		err := p.parse(nil)
 		test.NoError(t, err)
-		t.Logf("act: %+v", p.acts)
-		test.EqualsGo(t, 1, len(p.acts))
+		t.Logf("act: %+v", p.actions)
+		test.EqualsGo(t, 1, len(p.actions))
 		pos := Pos{
 			g:   &g,
 			src: []byte("foo bar"),
 		}
-		out, err := p.acts[0].exec(&pos)
+		out, err := p.actions[0].exec(&pos)
 		test.NoError(t, err)
 		test.EqualsJSON(t, `foo`, out)
 	}
@@ -35,15 +35,15 @@ func TestText(t *testing.T) {
 			g:         &g,
 			Directive: `/\S+/`,
 		}
-		err := p.build(nil)
+		err := p.parse(nil)
 		test.NoError(t, err)
-		t.Logf("act: %+v", p.acts)
-		test.EqualsGo(t, 1, len(p.acts))
+		t.Logf("act: %+v", p.actions)
+		test.EqualsGo(t, 1, len(p.actions))
 		pos := Pos{
 			g:   &g,
 			src: []byte("foo bar"),
 		}
-		out, err := p.acts[0].exec(&pos)
+		out, err := p.actions[0].exec(&pos)
 		test.NoError(t, err)
 		test.EqualsJSON(t, `foo`, out)
 	}
@@ -68,20 +68,20 @@ func TestDirectiveParsing(t *testing.T) {
 		p := Prod{
 			Directive: "/a/ /cd/",
 		}
-		err := p.build(nil)
+		err := p.parse(nil)
 		test.NoError(t, err)
-		t.Logf("act: %+v", p.acts)
-		test.EqualsGo(t, 2, len(p.acts))
+		t.Logf("act: %+v", p.actions)
+		test.EqualsGo(t, 2, len(p.actions))
 	}
 	{
 		p := Prod{
 			Directive: `/a\/b/`,
 		}
 		t.Logf("in: `%s`", p.Directive)
-		err := p.build(nil)
+		err := p.parse(nil)
 		test.NoError(t, err)
-		t.Logf("act: %+v", p.acts)
-		test.EqualsGo(t, 1, len(p.acts))
+		t.Logf("act: %+v", p.actions)
+		test.EqualsGo(t, 1, len(p.actions))
 	}
 }
 

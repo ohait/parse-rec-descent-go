@@ -44,7 +44,7 @@ func TestManualAssoc(t *testing.T) {
 
 	g.Add("lit", `/\d+/`, func(v string) any { return Lit{v} })
 
-	test.NoError(t, g.Build())
+	test.NoError(t, g.Verify())
 	out, err := g.Parse("add", []byte(`1+2+3`))
 	test.NoError(t, err)
 	t.Logf("%+v", out)
@@ -70,7 +70,7 @@ func TestG(t *testing.T) {
 	g.Add("lit", `/\d*\.\d*/`, func(v string) Lit { return Lit{v} })
 	g.Add("lit", `/"([^"]|".)*"/`, func(v string) Lit { return Lit{v} })
 
-	test.NoError(t, g.Build())
+	test.NoError(t, g.Verify())
 
 	t.Logf("lit: %+v", g.alts["lit"][0])
 

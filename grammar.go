@@ -4,21 +4,17 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
-	"sync"
-	"sync/atomic"
 
 	"github.com/Aize-Public/forego/ctx"
 )
 
 type Grammar struct {
-	m sync.Mutex
 
 	// Trailing regexp
 	End *regexp.Regexp
 
-	built atomic.Bool
-	alts  map[string]Alt
-	Log   func(f string, args ...any)
+	alts map[string]Alt
+	Log  func(f string, args ...any)
 }
 
 var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
@@ -31,7 +27,6 @@ func (this *Grammar) Add(name string, directives string, action any) *Prod {
 	if this.Log != nil {
 		this.Log("adding %s: %s", name, directives)
 	}
-	this.built.Store(false)
 	if this.alts == nil {
 		this.alts = map[string]Alt{}
 	}
@@ -42,6 +37,10 @@ func (this *Grammar) Add(name string, directives string, action any) *Prod {
 		Directive: directives,
 		src:       fmt.Sprintf("%s:%d", file, line),
 	}
+	err := p.parse(this)
+	if err != nil {
+		panic(err)
+	}
 	p.Return(action)
 	list := append(this.alts[name], p)
 	this.alts[name] = list
@@ -49,19 +48,13 @@ func (this *Grammar) Add(name string, directives string, action any) *Prod {
 }
 
 // build the grammar, returns an error if the grammar is not complete
-func (this *Grammar) Build() error {
-	this.m.Lock()
-	defer this.m.Unlock()
-	if this.Log != nil {
-		this.Log("building...")
-	}
-	this.built.Store(true)
+func (this *Grammar) Verify() error {
 	for name, alt := range this.alts {
 		if this.Log != nil {
 			this.Log("build[%q]", name)
 		}
 		for _, p := range alt {
-			err := p.build(this)
+			err := p.verify()
 			if err != nil {
 				return ctx.NewErrorf(nil, "%s: %s: %v", name, p.Directive, err)
 			}
@@ -72,12 +65,6 @@ func (this *Grammar) Build() error {
 
 // parse the given text, optionally compile the grammar if needed
 func (this *Grammar) Parse(name string, text []byte) (any, error) {
-	if !this.built.Load() { // already built
-		err := this.Build()
-		if err != nil {
-			return nil, err
-		}
-	}
 	p := Pos{
 		g:   this,
 		src: text,
