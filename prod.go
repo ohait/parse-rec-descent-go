@@ -14,6 +14,7 @@ type Alt []*Prod
 type Prod struct {
 	g *Grammar
 
+	// what will be removed before consuming this production
 	WS *regexp.Regexp
 
 	// Set by Add()
@@ -171,7 +172,15 @@ func (this *Prod) exec(p *Pos) (any, error) {
 		}
 	}
 	if this.ret == nil {
-		return list, err
+		switch len(list) {
+		case 0:
+			return nil, err
+		case 1:
+			return list[0], err
+		default:
+			return list, err
+		}
+
 	} else {
 		//if this.G.Log != nil { this.G.Log("ret(%v, %v)", in, out) }
 		out, err := this.ret(list)
@@ -181,7 +190,7 @@ func (this *Prod) exec(p *Pos) (any, error) {
 }
 
 // set a new return
-func (this *Prod) Return(action any) {
+func (this *Prod) Return(action any) *Prod {
 	if action == nil {
 		this.ret = func(in []any) (any, error) {
 			switch len(in) {
@@ -193,7 +202,7 @@ func (this *Prod) Return(action any) {
 				return in, nil
 			}
 		}
-		return
+		return this
 	}
 	f := reflect.ValueOf(action)
 	t := f.Type()
@@ -212,7 +221,7 @@ func (this *Prod) Return(action any) {
 		if this.g.Log != nil {
 			ins := []string{}
 			for _, in := range in {
-				ins = append(ins, fmt.Sprintf("%+v", in))
+				ins = append(ins, fmt.Sprintf("%T", in))
 			}
 			this.g.Log("calling `%v` with (%s)", t, strings.Join(ins, ", "))
 		}
@@ -248,4 +257,5 @@ func (this *Prod) Return(action any) {
 			panic("can only return (any) or (any, error)")
 		}
 	}
+	return this
 }

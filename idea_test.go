@@ -30,19 +30,19 @@ func (this Lit) String() string {
 
 func TestManualAssoc(t *testing.T) {
 	var g Grammar
-	g.Add("add", `lit add_`, func(op Op, list []BinOp) (any, error) {
+	g.Add("add", `lit add_`).Return(func(op Op, list []BinOp) (any, error) {
 		for _, n := range list {
 			n.Left = op
 			op = n
 		}
 		return op, nil
 	})
-	g.Add("add_", `/[\+\-]/ lit add_`, func(op string, lit any, extra []BinOp) any {
+	g.Add("add_", `/[\+\-]/ lit add_`).Return(func(op string, lit any, extra []BinOp) any {
 		return append([]BinOp{{Op: op, Right: lit}}, extra...)
 	})
-	g.Add("add_", ``, func() any { return nil })
+	g.Add("add_", ``).Return(func() any { return nil })
 
-	g.Add("lit", `/\d+/`, func(v string) any { return Lit{v} })
+	g.Add("lit", `/\d+/`).Return(func(v string) any { return Lit{v} })
 
 	test.NoError(t, g.Verify())
 	out, err := g.Parse("add", []byte(`1+2+3`))
@@ -52,23 +52,23 @@ func TestManualAssoc(t *testing.T) {
 
 func TestG(t *testing.T) {
 	var g Grammar
-	g.Add("expr", `cmp`, nil)
-	g.Add("cmp", `add /(<|<=|==|>-|>|!=)/ add`, func(l Op, op string, r Op) BinOp {
+	g.Add("expr", `cmp`)
+	g.Add("cmp", `add /(<|<=|==|>-|>|!=)/ add`).Return(func(l Op, op string, r Op) BinOp {
 		return BinOp{Left: l, Op: op, Right: r}
 	})
-	g.Add("cmp", `add`, nil)
+	g.Add("cmp", `add`)
 
-	g.Add("add", `mul /[\+\-]/ add`, func(l Op, op string, r Op) BinOp {
+	g.Add("add", `mul /[\+\-]/ add`).Return(func(l Op, op string, r Op) BinOp {
 		return BinOp{Left: l, Op: op, Right: r}
 	})
-	g.Add("add", `mul`, nil)
-	g.Add("mul", `lit /[\*\/]/ mul`, func(l Op, op string, r Op) BinOp {
+	g.Add("add", `mul`)
+	g.Add("mul", `lit /[\*\/]/ mul`).Return(func(l Op, op string, r Op) BinOp {
 		return BinOp{Left: l, Op: op, Right: r}
 	})
-	g.Add("mul", `lit`, nil)
-	g.Add("lit", `/\d+/`, func(v string) Lit { return Lit{v} })
-	g.Add("lit", `/\d*\.\d*/`, func(v string) Lit { return Lit{v} })
-	g.Add("lit", `/"([^"]|".)*"/`, func(v string) Lit { return Lit{v} })
+	g.Add("mul", `lit`)
+	g.Add("lit", `/\d+/`).Return(func(v string) Lit { return Lit{v} })
+	g.Add("lit", `/\d*\.\d*/`).Return(func(v string) Lit { return Lit{v} })
+	g.Add("lit", `/"([^"]|".)*"/`).Return(func(v string) Lit { return Lit{v} })
 
 	test.NoError(t, g.Verify())
 

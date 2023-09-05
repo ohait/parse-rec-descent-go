@@ -20,10 +20,12 @@ type Grammar struct {
 var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
 var CommentsAndWhitespaces = regexp.MustCompile(`(\s|//[^\n]*\n?)*`)
 
-// Add a new production with the given name, directive and action.
-// action must be a function with signatures compatible with the directive and return type same as the other production with the same name
+// Add a new production with the given name and directive
+// if many elements are in the directive, it returns a list of objects
+// otherwise return the only element
+// returns a production that can further be tweaked, adding a Return() action which override the above, and changing the whitespace
 // panics if anything is wrong (you normally don't want to handle the error, since can be seen as a compile time error)
-func (this *Grammar) Add(name string, directives string, action any) *Prod {
+func (this *Grammar) Add(name string, directives string) *Prod {
 	if this.Log != nil {
 		this.Log("adding %s: %s", name, directives)
 	}
@@ -41,7 +43,6 @@ func (this *Grammar) Add(name string, directives string, action any) *Prod {
 	if err != nil {
 		panic(err)
 	}
-	p.Return(action)
 	list := append(this.alts[name], p)
 	this.alts[name] = list
 	return p
