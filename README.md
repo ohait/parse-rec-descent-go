@@ -30,3 +30,30 @@ err := g.Verify() // make sure no production link to empty ones
 out, err := g.Parse("add", []byte("1+2+3")) // returns BinOp{BinOp{1, "+", 2}, "+", 3}
 ```
 
+## How it works
+
+You define some production, and then ask the grammar to parse some text.
+
+The parser will then *descend* the production directives and try to consume all the text.
+
+Each production can return custom structures, which allow you to generate AST directly where you define the grammar.
+
+## Production and Alternation
+
+```go
+  var g Grammar
+  g.Add("my_prod", `/(\+|-)/ ident`)
+  g.Add("ident", `/[+\-]?\d*/`) // integer
+  g.Add("ident", `/(true|false)/`) // bool
+```
+
+A grammar is made of several productions, each production has a name and a series of directives.
+
+If all the directives parse the input correctly, the production matches.
+
+If multiple productions have the same name, they are part of an alternation and they are checked in the sequence they were added to the grammar.
+
+First one that succeed will be used, and if none succeed the whole alternation fails.
+
+Each time another production of the same alternation is checked, the position of the parser is restored.
+
