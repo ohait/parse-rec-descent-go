@@ -14,7 +14,7 @@ type Alt []*Prod
 type Prod struct {
 	g *Grammar
 
-	// what will be removed before consuming this production
+	// what will be removed before consuming any directive
 	WS *regexp.Regexp
 
 	// Set by Add()
@@ -194,14 +194,15 @@ func (this *Prod) verify() error {
 func (this *Prod) exec(p *pos) (any, *Error) {
 	list := make([]any, 0, len(this.actions))
 	var err *Error
-	if this.WS != nil {
-		err := p.IgnoreRE(this.WS)
-		if err != nil {
-			return nil, p.NewErrorf("can't consume whitespace: %v", err)
-		}
-	}
 	from := p.at
 	for _, act := range this.actions {
+		if this.WS != nil {
+			err := p.IgnoreRE(this.WS)
+			if err != nil {
+				return nil, p.NewErrorf("can't consume whitespace: %v", err)
+			}
+		}
+
 		out, err := act.exec(p)
 		if err != nil {
 			return nil, err
