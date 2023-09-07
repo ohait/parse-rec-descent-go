@@ -50,8 +50,9 @@ func TestManualAssoc(t *testing.T) {
 	t.Logf("%+v", out)
 }
 
-func TestG(t *testing.T) {
+func TestGrammar(t *testing.T) {
 	var g Grammar
+	g.Log = t.Logf
 	g.Add("expr", `cmp`)
 	g.Add("cmp", `add /(<|<=|==|>-|>|!=)/ add`).Return(func(l Op, op string, r Op) BinOp {
 		return BinOp{Left: l, Op: op, Right: r}
@@ -74,6 +75,11 @@ func TestG(t *testing.T) {
 
 	t.Logf("lit: %+v", g.alts["lit"][0])
 
+	{
+		out, err := g.Parse("expr", []byte("1+2"))
+		test.NoError(t, err)
+		t.Logf("%+v", out)
+	}
 	{
 		out, err := g.Parse("expr", []byte("1+3*2"))
 		test.NoError(t, err)

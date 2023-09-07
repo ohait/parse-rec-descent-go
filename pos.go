@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/Aize-Public/forego/ctx"
@@ -19,16 +20,17 @@ func (this Pos) String() string {
 }
 
 type pos struct {
-	g     *Grammar
-	src   []byte
-	at    int
-	end   int
-	stack []string
+	g      *Grammar
+	src    []byte
+	at     int
+	end    int
+	stack  []string
+	commit bool
 }
 
 func (this *pos) Log(f string, args ...any) {
 	if this.g.Log != nil {
-		this.g.Log("%-11q %s  %s",
+		this.g.Log("%-11q %s| %s",
 			this.Rem(10),
 			strings.Join(this.stack, " "),
 			fmt.Sprintf(f, args...),
@@ -56,14 +58,14 @@ func (this *pos) IgnoreRE(re *regexp.Regexp) error {
 	return nil
 }
 
-func (this *pos) ConsumeRE(re *regexp.Regexp) (string, error) {
+func (this *pos) ConsumeRE(re *regexp.Regexp) (string, *Error) {
 	m := re.FindIndex(this.src[this.at:])
 	if m == nil {
 		this.Log("❌ FAIL /%v/", re)
-		return "", ctx.NewErrorf(nil, "expected /%v/ got %s", re, this.Rem(80))
+		return "", this.NewErrorf("expected /%v/ got %q", re, this.Rem(80))
 	}
 	if m[0] != 0 {
-		return "", ctx.NewErrorf(nil, "regexp /%s/ doesn't match: %v", re, this.Rem(80))
+		return "", this.NewErrorf("regexp /%s/ doesn't match: %q", re, this.Rem(80))
 	}
 	out := this.src[this.at : this.at+m[1]]
 	this.at += m[1]
@@ -81,29 +83,64 @@ func (this *pos) pop() {
 // try to consume each of the alternatives in the given order
 // first that succeed is returned
 // if none succeed the first error is returned
-func (this *pos) ConsumeAlt(alt Alt) (any, error) {
-	if len(alt) == 0 {
-		return nil, ctx.NewErrorf(nil, "no alternatives")
+func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
+	switch len(alt) {
+	case 0:
+		panic("no alternatives") // Verify() woudl have catched this
+	case 1:
+		prod := alt[0]
+		p := *this
+		p.commit = false
+		p.push(prod.Name)
+		p.Log("trying `%s`", prod.Directive)
+		out, err := prod.exec(&p)
+		this.at = p.at
+		return out, err
+	default:
 	}
-	var errs []error
-	start := this.at // checkpoint
+	var errs []*Error
 	for n, prod := range alt {
-		if len(alt) > 1 {
-			this.push(fmt.Sprintf("%s/%d", prod.Name, n))
-		} else {
-			this.push(fmt.Sprintf("%s", prod.Name))
-		}
-		this.Log("trying `%s`", prod.Directive)
-		out, err := prod.exec(this)
+		p := *this
+		p.commit = false
+		p.push(fmt.Sprintf("%s/%d", prod.Name, n))
+		p.Log("trying `%s`", prod.Directive)
+		out, err := prod.exec(&p)
+
 		if err == nil {
-			this.pop()
+			this.at = p.at
 			return out, nil
 		}
-		this.Log("failed <%s>: %v", prod.Name, err)
-		this.at = start // backtrack
+		if p.commit {
+			if err != nil {
+				p.Log("failed+commit <%s>: %v", prod.Name, err)
+			}
+			this.at = p.at
+			return out, err
+		}
+		p.Log("failed <%s>: %v", prod.Name, err)
 		errs = append(errs, err)
-		this.pop()
 	}
 	this.Log("can't find any production")
+	sort.Slice(errs, func(i, j int) bool {
+		return errs[i].at > errs[j].at
+	})
+	for _, e := range errs {
+		this.Log("» %v", e)
+	}
 	return nil, errs[0]
 }
+
+func (this *pos) NewErrorf(f string, args ...any) *Error {
+	return &Error{
+		err: ctx.NewErrorf(nil, f, args...),
+		at:  this.at,
+	}
+}
+
+type Error struct {
+	err error
+	at  int
+}
+
+func (this Error) Error() string { return fmt.Sprintf("%v at %d", this.err, this.at) }
+func (this Error) Unwrap() error { return this.err }

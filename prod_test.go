@@ -167,3 +167,15 @@ func TestBaseAction(t *testing.T) {
 		test.EqualsGo(t, 3+6, out)
 	}
 }
+
+func TestCommit(t *testing.T) {
+	{
+		var g Grammar
+		g.Log = t.Logf
+		g.Add("parens", `"(" ! word ")"`)
+		g.Add("parens", ``)
+		g.Add("word", `/\w+/`)
+		_, err := g.Parse("parens", []byte(`(foobar`))
+		test.Contains(t, "xxx", err.Error())
+	}
+}

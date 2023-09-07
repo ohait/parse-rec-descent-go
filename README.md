@@ -57,3 +57,16 @@ First one that succeed will be used, and if none succeed the whole alternation f
 
 Each time another production of the same alternation is checked, the position of the parser is restored.
 
+
+## commit 
+
+the special directive `!` an be added in the middle of a production to specify that no further alternatives must be tried.
+
+This both reduce the backtracking but also improves the error reporting
+
+
+## error
+
+every time a production fails, it returns an error that reports how fair it went parsing the input.
+
+When several alternations fails, the error that parsed the most text is used.

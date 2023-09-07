@@ -37,6 +37,8 @@ type action struct {
 	// if true, results won't be added to the output
 	silent bool
 
+	commit bool
+
 	p    *Prod
 	prod string
 	re   *regexp.Regexp
@@ -44,6 +46,9 @@ type action struct {
 
 func (this action) String() string {
 	s := ""
+	if this.commit {
+		return "!"
+	}
 	if this.silent {
 		s = "~"
 	}
@@ -56,18 +61,24 @@ func (this action) String() string {
 	return s
 }
 
-func (this action) exec(p *pos) (any, error) {
+func (this action) exec(p *pos) (any, *Error) {
+	if this.commit {
+		p.Log("commit %p", p)
+		p.commit = true
+		return nil, nil
+	}
 	if this.re != nil {
-		return p.ConsumeRE(this.re)
+		out, err := p.ConsumeRE(this.re)
+		return out, err
 	}
 	if this.prod != "" {
 		alt := this.p.g.alts[this.prod]
 		if len(alt) == 0 {
-			return nil, ctx.NewErrorf(nil, "no prod with name %q", this.prod)
+			return nil, p.NewErrorf("no prod with name %q", this.prod)
 		}
 		return p.ConsumeAlt(alt)
 	}
-	return nil, ctx.NewErrorf(nil, "empty action")
+	return nil, p.NewErrorf("empty action")
 }
 
 // helper
@@ -103,6 +114,14 @@ func (this *Prod) build() error {
 	for len(d) > 0 {
 		//log.Printf("parsing %q", d)
 		switch d[0] {
+
+		case '!': // commit to this production
+			this.actions = append(this.actions, action{
+				p:      this,
+				commit: true,
+				silent: true,
+			})
+			d = d[1:]
 
 		case '[': // TODO
 			re := regexp.MustCompile(`\[(.*)\]`)
@@ -172,13 +191,13 @@ func (this *Prod) verify() error {
 	return nil
 }
 
-func (this *Prod) exec(p *pos) (any, error) {
+func (this *Prod) exec(p *pos) (any, *Error) {
 	list := make([]any, 0, len(this.actions))
-	var err error
+	var err *Error
 	if this.WS != nil {
 		err := p.IgnoreRE(this.WS)
 		if err != nil {
-			return nil, ctx.NewErrorf(nil, "can't consume whitespace: %v", err)
+			return nil, p.NewErrorf("can't consume whitespace: %v", err)
 		}
 	}
 	from := p.at
@@ -204,8 +223,11 @@ func (this *Prod) exec(p *pos) (any, error) {
 	} else {
 		//if this.G.Log != nil { this.G.Log("ret(%v, %v)", in, out) }
 		out, err := this.ret(from, p, list)
+		if err != nil {
+			return out, &Error{err, p.at}
+		}
 		p.Log("return %v", out)
-		return out, err
+		return out, nil
 	}
 }
 
