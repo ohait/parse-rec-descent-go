@@ -9,13 +9,24 @@ import (
 )
 
 type Pos struct {
+	From int
+	End  int
+	Src  []byte
+}
+
+func (this Pos) String() string {
+	return fmt.Sprintf("%d-%d", this.From, this.End)
+}
+
+type pos struct {
 	g     *Grammar
 	src   []byte
 	at    int
+	end   int
 	stack []string
 }
 
-func (this *Pos) Log(f string, args ...any) {
+func (this *pos) Log(f string, args ...any) {
 	if this.g.Log != nil {
 		this.g.Log("%-11q %s  %s",
 			this.Rem(10),
@@ -25,7 +36,7 @@ func (this *Pos) Log(f string, args ...any) {
 	}
 }
 
-func (this *Pos) Rem(max int) string {
+func (this *pos) Rem(max int) string {
 	rem := this.src[this.at:]
 	if len(rem) > max {
 		rem = rem[0:max]
@@ -33,7 +44,7 @@ func (this *Pos) Rem(max int) string {
 	return string(rem)
 }
 
-func (this *Pos) IgnoreRE(re *regexp.Regexp) error {
+func (this *pos) IgnoreRE(re *regexp.Regexp) error {
 	m := re.Find(this.src[this.at:])
 	if m == nil {
 		return ctx.NewErrorf(nil, "expected /%v/", re)
@@ -45,7 +56,7 @@ func (this *Pos) IgnoreRE(re *regexp.Regexp) error {
 	return nil
 }
 
-func (this *Pos) ConsumeRE(re *regexp.Regexp) (string, error) {
+func (this *pos) ConsumeRE(re *regexp.Regexp) (string, error) {
 	m := re.FindIndex(this.src[this.at:])
 	if m == nil {
 		this.Log("❌ FAIL /%v/", re)
@@ -60,17 +71,17 @@ func (this *Pos) ConsumeRE(re *regexp.Regexp) (string, error) {
 	return string(out), nil
 }
 
-func (this *Pos) push(n string) {
+func (this *pos) push(n string) {
 	this.stack = append(this.stack, n)
 }
-func (this *Pos) pop() {
+func (this *pos) pop() {
 	this.stack = this.stack[0 : len(this.stack)-1]
 }
 
 // try to consume each of the alternatives in the given order
 // first that succeed is returned
 // if none succeed the first error is returned
-func (this *Pos) ConsumeAlt(alt Alt) (any, error) {
+func (this *pos) ConsumeAlt(alt Alt) (any, error) {
 	if len(alt) == 0 {
 		return nil, ctx.NewErrorf(nil, "no alternatives")
 	}

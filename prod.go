@@ -30,7 +30,7 @@ type Prod struct {
 	actions []action
 
 	// function to be used at the end of the production
-	ret func(in []any) (any, error)
+	ret func(from int, at *pos, in []any) (any, error)
 }
 
 type action struct {
@@ -56,7 +56,7 @@ func (this action) String() string {
 	return s
 }
 
-func (this action) exec(p *Pos) (any, error) {
+func (this action) exec(p *pos) (any, error) {
 	if this.re != nil {
 		return p.ConsumeRE(this.re)
 	}
@@ -70,7 +70,26 @@ func (this action) exec(p *Pos) (any, error) {
 	return nil, ctx.NewErrorf(nil, "empty action")
 }
 
-func (this *Prod) parse(g *Grammar) error {
+// helper
+func (this *Prod) Parse(in []byte, end *regexp.Regexp) (any, error) {
+	p := &pos{
+		g:   this.g,
+		src: in,
+	}
+	out, err := p.ConsumeAlt(Alt{this})
+	if err != nil {
+		return nil, err
+	}
+	if end != nil {
+		p.IgnoreRE(end)
+	}
+	if p.Rem(10) != "" {
+		return out, ctx.NewErrorf(nil, "rem: %q", p.Rem(80))
+	}
+	return out, nil
+}
+
+func (this *Prod) build() error {
 	//log.Printf("prod[%q]...", this.Name)
 	this.Directive = strings.TrimSpace(this.Directive)
 	if this.Directive == "" {
@@ -153,7 +172,7 @@ func (this *Prod) verify() error {
 	return nil
 }
 
-func (this *Prod) exec(p *Pos) (any, error) {
+func (this *Prod) exec(p *pos) (any, error) {
 	list := make([]any, 0, len(this.actions))
 	var err error
 	if this.WS != nil {
@@ -162,6 +181,7 @@ func (this *Prod) exec(p *Pos) (any, error) {
 			return nil, ctx.NewErrorf(nil, "can't consume whitespace: %v", err)
 		}
 	}
+	from := p.at
 	for _, act := range this.actions {
 		out, err := act.exec(p)
 		if err != nil {
@@ -183,7 +203,7 @@ func (this *Prod) exec(p *Pos) (any, error) {
 
 	} else {
 		//if this.G.Log != nil { this.G.Log("ret(%v, %v)", in, out) }
-		out, err := this.ret(list)
+		out, err := this.ret(from, p, list)
 		p.Log("return %v", out)
 		return out, err
 	}
@@ -192,7 +212,7 @@ func (this *Prod) exec(p *Pos) (any, error) {
 // set a new return
 func (this *Prod) Return(action any) *Prod {
 	if action == nil {
-		this.ret = func(in []any) (any, error) {
+		this.ret = func(from int, p *pos, in []any) (any, error) {
 			switch len(in) {
 			case 0:
 				return nil, nil
@@ -213,11 +233,26 @@ func (this *Prod) Return(action any) *Prod {
 			actNum++
 		}
 	}
+	wantPos := t.NumIn() > 0 && t.In(0) == reflect.TypeOf(Pos{})
+	if wantPos {
+		actNum++
+	}
+
 	if t.NumIn() != actNum {
 		panic(fmt.Sprintf("%s: %v expects %d args, but %d are in the directive (%+v)", this.src, t, t.NumIn(), actNum, this.actions))
 	}
+	switch t.NumOut() {
+	case 1:
+	case 2:
+		if t.Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
+			panic(fmt.Sprintf("%s: %v should return (X, error) or (X)", this.src, t))
+		}
+	default:
+		panic(fmt.Sprintf("%s: %v should return (X, error) or (X)", this.src, t))
+	}
+	// TODO: test out either (X, error) or (X)
 
-	this.ret = func(in []any) (any, error) {
+	this.ret = func(from int, p *pos, in []any) (any, error) {
 		if this.g.Log != nil {
 			ins := []string{}
 			for _, in := range in {
@@ -226,17 +261,20 @@ func (this *Prod) Return(action any) *Prod {
 			this.g.Log("calling `%v` with (%s)", t, strings.Join(ins, ", "))
 		}
 		var list []reflect.Value
-		for i, in := range in {
-			t := t.In(i) // expected type
+		if wantPos {
+			list = append(list, reflect.ValueOf(Pos{from, p.at, p.src}))
+		}
+		for _, in := range in {
+			t := t.In(len(list)) // expected type
 			v, err := coerce(reflect.ValueOf(in), t)
 			if err != nil {
-				panic(fmt.Sprintf("%s: can't coerce arg #%d: %v", this.src, i, err))
+				panic(fmt.Sprintf("%s: can't coerce arg #%d: %v", this.src, len(list), err))
 			}
 			//if this.g.Log != nil { this.g.Log("ARG: %v", v) }
 			list = append(list, v)
 		}
 		if len(list) != t.NumIn() {
-			panic(fmt.Sprintf("%s: action `%v` expects %d arguments, but got %+v", this.src, t, t.NumOut(), len(list)))
+			panic(fmt.Sprintf("%s: action `%v` expects %d arguments, but got %+v (wantPos: %v)", this.src, t, t.NumOut(), len(list), wantPos))
 		}
 		//log.Printf("CALL[%v](%v)", f, list)
 		out := f.Call(list)
@@ -250,7 +288,7 @@ func (this *Prod) Return(action any) *Prod {
 				return first, nil
 			}
 			if this.g.Log != nil {
-				this.g.Log("ERR: %T (%+v)", second, second)
+				this.g.Log("ERR: %T (%+v)", second, second.(error))
 			}
 			return first, second.(error)
 		default:

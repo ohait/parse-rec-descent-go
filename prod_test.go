@@ -14,11 +14,11 @@ func TestRegex(t *testing.T) {
 			g:         &g,
 			Directive: `/\S+/`,
 		}
-		err := p.parse(nil)
+		err := p.build()
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 1, len(p.actions))
-		pos := Pos{
+		pos := pos{
 			g:   &g,
 			src: []byte("foo bar"),
 		}
@@ -35,11 +35,11 @@ func TestText(t *testing.T) {
 			g:         &g,
 			Directive: `/\S+/`,
 		}
-		err := p.parse(nil)
+		err := p.build()
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 1, len(p.actions))
-		pos := Pos{
+		pos := pos{
 			g:   &g,
 			src: []byte("foo bar"),
 		}
@@ -68,7 +68,7 @@ func TestDirectiveParsing(t *testing.T) {
 		p := Prod{
 			Directive: "/a/ /cd/",
 		}
-		err := p.parse(nil)
+		err := p.build()
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 2, len(p.actions))
@@ -78,7 +78,7 @@ func TestDirectiveParsing(t *testing.T) {
 			Directive: `/a\/b/`,
 		}
 		t.Logf("in: `%s`", p.Directive)
-		err := p.parse(nil)
+		err := p.build()
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 1, len(p.actions))
@@ -151,5 +151,19 @@ func TestBaseAction(t *testing.T) {
 		out, err := g.Parse("main", []byte("foo foo"))
 		test.NoError(t, err)
 		test.EqualsGo(t, "foo", out)
+	}
+	{
+		var g Grammar
+		g.Add("main", `word word`).Return(func(left, right int) int {
+			t.Logf("%d+%d", left, right)
+			return right + left
+		})
+		g.Add("word", `/\w+/`).Return(func(p Pos, s string) int {
+			t.Logf("%q => %d - %d", s, p.End, p.From)
+			return p.End - p.From
+		}).WS = Whitespaces
+		out, err := g.Parse("main", []byte("xyz foobar"))
+		test.NoError(t, err)
+		test.EqualsGo(t, 3+6, out)
 	}
 }

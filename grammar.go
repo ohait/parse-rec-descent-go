@@ -39,7 +39,7 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		Directive: directives,
 		src:       fmt.Sprintf("%s:%d", file, line),
 	}
-	err := p.parse(this)
+	err := p.build()
 	if err != nil {
 		panic(err)
 	}
@@ -64,9 +64,10 @@ func (this *Grammar) Verify() error {
 	return nil
 }
 
-// parse the given text, optionally compile the grammar if needed
+// parse the given text using the named alternative
+// check for unparsed text
 func (this *Grammar) Parse(name string, text []byte) (any, error) {
-	p := Pos{
+	p := pos{
 		g:   this,
 		src: text,
 	}
