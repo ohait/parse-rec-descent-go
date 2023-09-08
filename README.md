@@ -58,6 +58,33 @@ First one that succeed will be used, and if none succeed the whole alternation f
 Each time another production of the same alternation is checked, the position of the parser is restored.
 
 
+## Return
+
+When a production matches, it generates a list of matching arguments.
+
+By default, if the list is empty, `nil` is returned.
+If only 1 element is present, the element itself is returned.
+otherwise the list is returned.
+
+Users can modify this behaviour by setting a custom function.
+
+The function will be called when productions succeed, and special `reflect` magic happens under the hood to call the function, so to map some of the
+directive to the arguments.
+
+```go
+g.Add("x", `a list`).Return(func(a A, list []X) (X, error) {
+  return X{a, list}
+})
+g.Add("a", `x`).Return(func(p parse.Pos, x X) A {
+  return Y{p, x}
+})
+```
+
+In the example above, you can see how each directive has matching argument, and the type is converted for you.
+
+In the second production, you can see how you can add an extra argument (only the first one) which accept a `parse.Pos` which can be useful for debugging
+or error reporting
+
 ## commit 
 
 the special directive `!` an be added in the middle of a production to specify that no further alternatives must be tried.

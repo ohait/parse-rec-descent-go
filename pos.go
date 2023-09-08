@@ -26,13 +26,23 @@ type pos struct {
 	end    int
 	stack  []string
 	commit bool
+	p      *Prod
 }
 
 func (this *pos) Log(f string, args ...any) {
 	if this.g.Log != nil {
-		this.g.Log("%-11q %s| %s",
-			this.Rem(10),
-			strings.Join(this.stack, " "),
+		rem := strings.TrimSuffix(fmt.Sprintf("%q", this.Rem(15))[1:], `"`)
+		if len(rem) > 10 {
+			rem = rem[0:10]
+		}
+		prod := ""
+		if this.p != nil {
+			prod = this.p.src
+		}
+		this.g.Log("\033[0;33m%-010s\033[0;34m %s \033[0;35m%s\033[0m %s",
+			rem,
+			strings.Join(this.stack, "."),
+			prod,
 			fmt.Sprintf(f, args...),
 		)
 	}
@@ -53,7 +63,7 @@ func (this *pos) IgnoreRE(re *regexp.Regexp) error {
 	}
 	this.at += len(m)
 	if len(m) > 0 {
-		this.Log("skip /%s/: %q ", re, m)
+		this.Log("skip /%s/: %q", re, m)
 	}
 	return nil
 }
@@ -91,8 +101,8 @@ func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
 		prod := alt[0]
 		p := *this
 		p.commit = false
-		p.push(prod.Name)
-		p.Log("trying `%s`", prod.Directive)
+		p.push("")
+		p.Log("trying %s[%s] `%s`", prod.Name, prod.src, prod.Directive)
 		out, err := prod.exec(&p)
 		this.at = p.at
 		return out, err
@@ -103,7 +113,7 @@ func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
 		p := *this
 		p.commit = false
 		p.push(fmt.Sprintf("%s/%d", prod.Name, n))
-		p.Log("trying `%s`", prod.Directive)
+		p.Log("trying %s[%s] `%s` ", prod.Name, prod.src, prod.Directive)
 		out, err := prod.exec(&p)
 
 		if err == nil {
@@ -112,12 +122,12 @@ func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
 		}
 		if p.commit {
 			if err != nil {
-				p.Log("failed+commit <%s>: %v", prod.Name, err)
+				p.Log("failed+commit %s[%s]: %v", prod.Name, prod.src, err)
 			}
 			this.at = p.at
 			return out, err
 		}
-		p.Log("failed <%s>: %v", prod.Name, err)
+		p.Log("failed %s[%s]: %v", prod.Name, prod.src, err)
 		errs = append(errs, err)
 	}
 	this.Log("can't find any production")

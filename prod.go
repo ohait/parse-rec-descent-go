@@ -14,7 +14,7 @@ type Alt []*Prod
 type Prod struct {
 	g *Grammar
 
-	// what will be removed before consuming any directive
+	// what to ignore before any text matching
 	WS *regexp.Regexp
 
 	// Set by Add()
@@ -68,6 +68,13 @@ func (this action) exec(p *pos) (any, *Error) {
 		return nil, nil
 	}
 	if this.re != nil {
+		if this.p.WS != nil {
+			err := p.IgnoreRE(this.p.WS)
+			if err != nil {
+				return nil, p.NewErrorf("can't consume whitespace: %v", err)
+			}
+		}
+
 		out, err := p.ConsumeRE(this.re)
 		return out, err
 	}
@@ -192,17 +199,11 @@ func (this *Prod) verify() error {
 }
 
 func (this *Prod) exec(p *pos) (any, *Error) {
+	p.p = this
 	list := make([]any, 0, len(this.actions))
 	var err *Error
 	from := p.at
 	for _, act := range this.actions {
-		if this.WS != nil {
-			err := p.IgnoreRE(this.WS)
-			if err != nil {
-				return nil, p.NewErrorf("can't consume whitespace: %v", err)
-			}
-		}
-
 		out, err := act.exec(p)
 		if err != nil {
 			return nil, err
@@ -230,6 +231,11 @@ func (this *Prod) exec(p *pos) (any, *Error) {
 		p.Log("return %v", out)
 		return out, nil
 	}
+}
+
+func (this *Prod) SetWS(ws string) *Prod {
+	this.WS = regexp.MustCompile(ws)
+	return this
 }
 
 // set a new return
@@ -281,7 +287,7 @@ func (this *Prod) Return(action any) *Prod {
 			for _, in := range in {
 				ins = append(ins, fmt.Sprintf("%T", in))
 			}
-			this.g.Log("calling `%v` with (%s)", t, strings.Join(ins, ", "))
+			p.Log("calling `%v` with (%s)", t, strings.Join(ins, ", "))
 		}
 		var list []reflect.Value
 		if wantPos {

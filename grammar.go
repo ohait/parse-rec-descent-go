@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/Aize-Public/forego/ctx"
 )
@@ -15,6 +16,17 @@ type Grammar struct {
 
 	alts map[string]Alt
 	Log  func(f string, args ...any)
+
+	Stats struct {
+		Productions  int
+		Alternations int
+		ParseCt      int
+		ParseElapsed time.Duration
+	}
+}
+
+func (this Grammar) String() string {
+	return fmt.Sprintf("parse.Grammar{%d/%d %v}", this.Stats.Productions, this.Stats.Alternations, this.Stats.ParseElapsed/time.Duration(this.Stats.ParseCt))
 }
 
 var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
@@ -30,8 +42,10 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		this.Log("adding %s: %s", name, directives)
 	}
 	if this.alts == nil {
+		this.Stats.Alternations++
 		this.alts = map[string]Alt{}
 	}
+	this.Stats.Productions++
 	_, file, line, _ := runtime.Caller(1)
 	p := &Prod{
 		g:         this,
@@ -67,19 +81,26 @@ func (this *Grammar) Verify() error {
 // parse the given text using the named alternative
 // check for unparsed text
 func (this *Grammar) Parse(name string, text []byte) (any, error) {
+	t0 := time.Now()
 	p := pos{
 		g:   this,
 		src: text,
 	}
 	out, err := p.ConsumeAlt(this.alts[name])
+
 	if err != nil {
-		return nil, err
+		return out, err
 	}
+
 	if this.End != nil {
 		p.IgnoreRE(this.End)
 	}
 	if p.Rem(10) != "" {
 		return out, ctx.NewErrorf(nil, "unparsed: %q", p.Rem(80))
 	}
-	return out, nil
+
+	dt := time.Since(t0)
+	this.Stats.ParseCt++
+	this.Stats.ParseElapsed += dt
+	return out, err
 }
