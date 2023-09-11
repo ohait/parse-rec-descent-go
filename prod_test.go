@@ -164,7 +164,7 @@ func TestBaseAction(t *testing.T) {
 		}).WS = Whitespaces
 		out, err := g.Parse("main", []byte("xyz foobar"))
 		test.NoError(t, err)
-		test.EqualsGo(t, 3+6, out)
+		test.EqualsGo(t, 10, out)
 	}
 }
 
@@ -173,9 +173,12 @@ func TestCommit(t *testing.T) {
 		var g Grammar
 		g.Log = t.Logf
 		g.Add("parens", `"(" ! word ")"`)
-		g.Add("parens", ``)
+		g.Add("parens", ``).Return(func() any {
+			t.Fatalf("commit not honored")
+			return nil
+		})
 		g.Add("word", `/\w+/`)
 		_, err := g.Parse("parens", []byte(`(foobar`))
-		test.Contains(t, "xxx", err.Error())
+		test.Contains(t, err.Error(), ")")
 	}
 }
