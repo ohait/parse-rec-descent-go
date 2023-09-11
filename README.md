@@ -100,7 +100,7 @@ When several alternations fails, the error that parsed the most text is used.
 
 ## Expression example
 
-### Associativity
+### Associativity and Recursion
 
 ```
    40
@@ -116,8 +116,8 @@ To parse the example above, you could use the simple grammar:
 
 ```go
   var g Grammar
-  g.Add("div", `num "/" num`)
-  g.Add("div", `num`)
+  g.Add("div", `num "/" div`) // alt 1: one `num` followed by `/` and then recurse `div` again
+  g.Add("div", `num`)         // alt 2: `num` and nothing else
   g.Add("num", `/\d+/`)
 ```
 
@@ -133,7 +133,12 @@ A better approach is to write a grammar like this:
   g.Add("num", `/\d+/`)
 ```
 
-While slightly more complicated, it avoids completely backtracking, and the left side is always parsed only once.
+While slightly more complicated, it avoids backtracking, since `num` is only parsed at the start, and must succeed.
+
+If so, then `div_` alternatives are checked, where either there is a `/` or there isn't.
+
+One of the side effects of this approach is that it associate to the right instead of the left, and for this we need Actions.
+
 
 ### Action
 
@@ -143,7 +148,7 @@ With a simple grammar like the one above, it easy to make sense of the output tr
   // ast => [40 [10 [2 <nil>]]]
 ```
 
-But with increasingly complex grammars, it's best to generate custom objects as output:
+But to make it associate to the left, or in general to simplify reading the output, you can generate an AST (Abstract syntax tree) directly:
 
 ```go
     g.Add("div", `num div_`).Return(func(op any, tail []BinOp) any {
@@ -161,7 +166,8 @@ But with increasingly complex grammars, it's best to generate custom objects as 
     g.Add("num", `/\d+/`)
 ```
 
-The above code will do a better job at generating a useful AST:
+Which for the example above `40/10/2` would return:
+
 ```go
   BinOp{
     Left:BinOp{
@@ -173,6 +179,9 @@ The above code will do a better job at generating a useful AST:
     Right:"2",
   }
 ```
+
+Which is easier to read, can be further specialized, and it correctly associate to the left.
+
 
 ### Precedence
 
