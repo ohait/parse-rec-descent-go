@@ -39,6 +39,9 @@ func (this *pos) Log(f string, args ...any) {
 		if this.p != nil {
 			prod = this.p.src
 		}
+		if i := strings.LastIndex(prod, "/"); i > 0 {
+			prod = prod[i+1:]
+		}
 		this.g.Log("\033[0;33m%-010s\033[0;34m %s \033[0;35m%s\033[0m %s",
 			rem,
 			strings.Join(this.stack, "."),

@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"time"
@@ -47,6 +48,7 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 	}
 	this.Stats.Productions++
 	_, file, line, _ := runtime.Caller(1)
+	file = filepath.Base(file)
 	p := &Prod{
 		g:         this,
 		Name:      name,
