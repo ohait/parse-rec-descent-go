@@ -19,6 +19,19 @@ func (this Pos) String() string {
 	return fmt.Sprintf("%d-%d", this.From, this.End)
 }
 
+func (this Pos) Extract(maxLines int) string {
+	s := string(this.Src[this.From:this.End])
+	if maxLines == 0 {
+		return s
+	}
+	parts := strings.Split(s, "\n")
+	if len(parts) > maxLines {
+		parts = parts[0:maxLines]
+		return strings.Join(parts, "\n")
+	}
+	return s
+}
+
 type pos struct {
 	g      *Grammar
 	src    []byte

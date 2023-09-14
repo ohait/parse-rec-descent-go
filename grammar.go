@@ -104,5 +104,5 @@ func (this *Grammar) Parse(name string, text []byte) (any, error) {
 	dt := time.Since(t0)
 	this.Stats.ParseCt++
 	this.Stats.ParseElapsed += dt
-	return out, err
+	return out, nil
 }
