@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/Aize-Public/forego/ctx"
 )
 
 type Pos struct {
@@ -75,7 +73,8 @@ func (this *pos) Rem(max int) string {
 func (this *pos) IgnoreRE(re *regexp.Regexp) error {
 	m := re.Find(this.src[this.at:])
 	if m == nil {
-		return ctx.NewErrorf(nil, "expected /%v/", re)
+		//return ctx.NewErrorf(nil, "expected /%v/", re)
+		return fmt.Errorf("expected /%v/", re)
 	}
 	this.at += len(m)
 	if len(m) > 0 {
@@ -158,8 +157,9 @@ func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
 
 func (this *pos) NewErrorf(f string, args ...any) *Error {
 	return &Error{
-		err: ctx.NewErrorf(nil, f, args...),
-		at:  this.at,
+		err: fmt.Errorf(f, args...),
+		//err: ctx.NewErrorf(nil, f, args...),
+		at: this.at,
 	}
 }
 
