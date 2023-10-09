@@ -43,7 +43,6 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		this.Log("adding %s: %s", name, directives)
 	}
 	if this.alts == nil {
-		this.Stats.Alternations++
 		this.alts = map[string]Alt{}
 	}
 	this.Stats.Productions++
@@ -61,6 +60,9 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 	}
 	list := append(this.alts[name], p)
 	this.alts[name] = list
+	if len(list) == 1 {
+		this.Stats.Alternations++
+	}
 	return p
 }
 
