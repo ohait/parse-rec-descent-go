@@ -172,7 +172,7 @@ func TestCommit(t *testing.T) {
 	{
 		var g Grammar
 		g.Log = t.Logf
-		g.Add("parens", `"(" ! word ")"`)
+		g.Add("parens", `"(" + word ")"`)
 		g.Add("parens", ``).Return(func() any {
 			t.Fatalf("commit not honored")
 			return nil
@@ -180,5 +180,22 @@ func TestCommit(t *testing.T) {
 		g.Add("word", `/\w+/`)
 		_, err := g.Parse("parens", []byte(`(foobar`))
 		test.Contains(t, err.Error(), ")")
+	}
+}
+
+func TestNegative(t *testing.T) {
+	{
+		var g Grammar
+		g.Log = t.Logf
+		g.Add("add", `word "+" !"a" word`)
+		g.Add("word", `/\w+/`)
+		{
+			_, err := g.Parse("add", []byte(`a+abc`))
+			test.Contains(t, err.Error(), "a")
+		}
+		{
+			_, err := g.Parse("add", []byte(`a+bcd`))
+			test.NoError(t, err)
+		}
 	}
 }

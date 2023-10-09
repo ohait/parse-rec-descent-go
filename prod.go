@@ -39,15 +39,16 @@ type action struct {
 
 	commit bool
 
-	p    *Prod
-	prod string
-	re   *regexp.Regexp
+	p        *Prod
+	prod     string
+	re       *regexp.Regexp
+	negative bool // if true, make into a negative lookahead
 }
 
 func (this action) String() string {
 	s := ""
 	if this.commit {
-		return "!"
+		return "+"
 	}
 	if this.silent {
 		s = "~"
@@ -117,12 +118,17 @@ func (this *Prod) build() error {
 		return nil
 	}
 
+	negative := false
 	d := this.Directive
 	for len(d) > 0 {
 		//log.Printf("parsing %q", d)
 		switch d[0] {
 
-		case '!': // commit to this production
+		case '!': // negative look ahead
+			negative = true
+			d = d[1:]
+
+		case '+': // commit to this production
 			this.actions = append(this.actions, action{
 				p:      this,
 				commit: true,
@@ -144,10 +150,12 @@ func (this *Prod) build() error {
 			d = d[len(m[0]):]
 			re = regexp.MustCompile(regexp.QuoteMeta(m[1]))
 			this.actions = append(this.actions, action{
-				p:      this,
-				re:     re,
-				silent: true,
+				p:        this,
+				re:       re,
+				negative: negative,
+				silent:   true,
 			})
+			negative = false
 
 		case '/':
 			re := regexp.MustCompile(`^/(([^/\\]|\\.)*)/`)
@@ -162,9 +170,11 @@ func (this *Prod) build() error {
 			}
 			//log.Printf("prod[%q]: /%s/", this.Name, re)
 			this.actions = append(this.actions, action{
-				p:  this,
-				re: re,
+				p:        this,
+				re:       re,
+				negative: negative,
 			})
+			negative = false
 
 		case ' ', '\t', '\n', '\r': // ignore whitespace
 			d = d[1:]
@@ -178,9 +188,11 @@ func (this *Prod) build() error {
 			d = d[len(m[0]):]
 			name := m[1]
 			this.actions = append(this.actions, action{
-				p:    this,
-				prod: name,
+				p:        this,
+				prod:     name,
+				negative: negative,
 			})
+			negative = false
 		}
 	}
 
@@ -204,12 +216,22 @@ func (this *Prod) exec(p *pos) (any, *Error) {
 	var err *Error
 	from := p.at
 	for _, act := range this.actions {
-		out, err := act.exec(p)
-		if err != nil {
-			return nil, err
-		}
-		if !act.silent {
-			list = append(list, out)
+		if act.negative {
+			rev := p.at
+			_, err := act.exec(p)
+			p.at = rev
+			if err == nil {
+				return nil, p.NewErrorf("negative lookahead: %s", p.Rem(20))
+			}
+			p.Log("negative lookahead ok: %v", err)
+		} else {
+			out, err := act.exec(p)
+			if err != nil {
+				return nil, err
+			}
+			if !act.silent {
+				list = append(list, out)
+			}
 		}
 	}
 	if this.ret == nil {
