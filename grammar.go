@@ -97,7 +97,7 @@ func (this *Grammar) Parse(name string, text []byte) (any, error) {
 	}
 
 	if this.End != nil {
-		p.IgnoreRE(this.End)
+		p.IgnoreRE(this.End, false)
 	}
 	if p.Rem(10) != "" {
 		return out, ctx.NewErrorf(nil, "unparsed: %q", p.Rem(80))

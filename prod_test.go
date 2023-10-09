@@ -187,7 +187,7 @@ func TestNegative(t *testing.T) {
 	{
 		var g Grammar
 		g.Log = t.Logf
-		g.Add("add", `word "+" !"a" word`)
+		g.Add("add", `word "+" !"a" + word`)
 		g.Add("word", `/\w+/`)
 		{
 			_, err := g.Parse("add", []byte(`a+abc`))

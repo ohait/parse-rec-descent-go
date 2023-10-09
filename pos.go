@@ -70,32 +70,49 @@ func (this *pos) Rem(max int) string {
 	return string(rem)
 }
 
-func (this *pos) IgnoreRE(re *regexp.Regexp) error {
+func (this *pos) IgnoreRE(re *regexp.Regexp, negative bool) error {
 	m := re.Find(this.src[this.at:])
 	if m == nil {
+		if negative {
+			return nil
+		}
 		//return ctx.NewErrorf(nil, "expected /%v/", re)
-		return fmt.Errorf("expected /%v/", re)
+		return fmt.Errorf("❌ expected /%v/", re)
 	}
-	this.at += len(m)
-	if len(m) > 0 {
-		this.Log("skip /%s/: %q", re, m)
+	if negative {
+		return fmt.Errorf("❌ unexpected /%v/", re)
+	} else {
+		this.at += len(m)
+		if len(m) > 0 {
+			this.Log("skip /%s/: %q", re, m)
+		}
+		return nil
 	}
-	return nil
 }
 
-func (this *pos) ConsumeRE(re *regexp.Regexp) (string, *Error) {
+func (this *pos) ConsumeRE(re *regexp.Regexp, negative bool) (string, *Error) {
 	m := re.FindIndex(this.src[this.at:])
 	if m == nil {
+		if negative {
+			this.Log("✅ NEG AHEAD /%v/", re)
+			return "", nil
+		}
 		this.Log("❌ FAIL /%v/", re)
 		return "", this.NewErrorf("expected /%v/ got %q", re, this.Rem(80))
 	}
 	if m[0] != 0 {
-		return "", this.NewErrorf("regexp /%s/ doesn't match: %q", re, this.Rem(80))
+		panic("re must match from the beginnin")
 	}
 	out := this.src[this.at : this.at+m[1]]
-	this.at += m[1]
-	this.Log("✅ CONSUMED %q", out)
-	return string(out), nil
+	if negative {
+		//this.at += m[1]
+		this.Log("❌ NEG AHEAD %q", out)
+		return "", this.NewErrorf("unwanted /%v/", re)
+	} else {
+		this.at += m[1]
+		this.Log("✅ CONSUMED /%v/ %q (%v)", re, out, m[1])
+		return string(out), nil
+	}
 }
 
 func (this *pos) push(n string) {

@@ -74,7 +74,7 @@ func TestReadme3(t *testing.T) {
 	g.Add("add_", ``)
 
 	g.Add("mul", `unary mul_`).Return(leftAssoc)
-	g.Add("mul_", `/(\*|\/|%)/ ! unary mul_`).Return(assocTail).WS = parse.CommentsAndWhitespaces
+	g.Add("mul_", `/(\*|\/|%)/ + unary mul_`).Return(assocTail).WS = parse.CommentsAndWhitespaces
 	g.Add("mul_", ``)
 
 	g.Add("unary", `"-" op`).Return(func(op any) BinOp {
@@ -82,7 +82,7 @@ func TestReadme3(t *testing.T) {
 	})
 	g.Add("unary", `op`)
 
-	g.Add("op", `"(" ! add ")"`).Return(func(op any) Parens {
+	g.Add("op", `"(" + add ")"`).Return(func(op any) Parens {
 		return Parens{op}
 	})
 	g.Add("op", `/\d+/`)
