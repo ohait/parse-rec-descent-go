@@ -42,9 +42,9 @@ type pos struct {
 
 func (this *pos) Log(f string, args ...any) {
 	if this.g.Log != nil {
-		rem := strings.TrimSuffix(fmt.Sprintf("%q", this.Rem(15))[1:], `"`)
-		if len(rem) > 10 {
-			rem = rem[0:10]
+		rem := strings.TrimSuffix(fmt.Sprintf("%q", this.Rem(25))[1:], `"`)
+		if len(rem) > 20 {
+			rem = rem[0:20]
 		}
 		prod := ""
 		if this.p != nil {
@@ -53,7 +53,7 @@ func (this *pos) Log(f string, args ...any) {
 		if i := strings.LastIndex(prod, "/"); i > 0 {
 			prod = prod[i+1:]
 		}
-		this.g.Log("\033[0;33m%-010s\033[0;34m %s \033[0;35m%s\033[0m %s",
+		this.g.Log("\033[0;33m%-020s\033[0;34m %s \033[0;35m%s\033[0m %s",
 			rem,
 			strings.Join(this.stack, "."),
 			prod,
