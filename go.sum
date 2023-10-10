@@ -1,4 +1,8 @@
+github.com/Aize-Public/forego v0.0.0-20231009114434-595d0f86fe0c h1:YdnFKxIUkhB9YqvxhwdPNfpQ/r8fAe8ZbiLmzxvzz+s=
+github.com/Aize-Public/forego v0.0.0-20231009114434-595d0f86fe0c/go.mod h1:OLUk7xYx2RgYXM09jDhyDVpE8hmKLa8XQDN8w9oVc6U=
 github.com/Aize-Public/forego v0.1.0 h1:dn5wROx9yCM2F7rdwUzyZG2XFOMbdUMfzvPWv3rpBIs=
 github.com/Aize-Public/forego v0.1.0/go.mod h1:ZLQXRs9m/koSy9oPC4puoWMcWdwRLnCWx2EVJD28QqI=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+golang.org/x/sys v0.11.0 h1:eG7RXZHdqOJ1i+0lgLgCpSXAp6M3LYlAo6osgSi0xOM=
+golang.org/x/sys v0.11.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
