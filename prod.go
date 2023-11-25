@@ -90,10 +90,11 @@ func (this action) exec(p *pos) (any, *Error) {
 }
 
 // helper
-func (this *Prod) Parse(in []byte, end *regexp.Regexp) (any, error) {
+func (this *Prod) Parse(fname string, in []byte, end *regexp.Regexp) (any, error) {
 	p := &pos{
-		g:   this.g,
-		src: in,
+		g:    this.g,
+		file: fname,
+		src:  in,
 	}
 	out, err := p.ConsumeAlt(Alt{this})
 	if err != nil {
@@ -313,7 +314,7 @@ func (this *Prod) Return(action any) *Prod {
 		}
 		var list []reflect.Value
 		if wantPos {
-			list = append(list, reflect.ValueOf(Pos{from, p.at, p.src}))
+			list = append(list, reflect.ValueOf(Pos{from, p.at, p.file, p.src}))
 		}
 		for _, in := range in {
 			t := t.In(len(list)) // expected type

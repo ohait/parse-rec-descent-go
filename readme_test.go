@@ -15,7 +15,7 @@ func TestReadme1(t *testing.T) {
 	g.Add("div_", ``)             // return nil
 	g.Add("num", `/\d+/`)
 
-	ast, err := g.Parse("div", []byte(`40/10/2`))
+	ast, err := g.Parse("div", "", []byte(`40/10/2`))
 	t.Logf("%+v (%v)", ast, err)
 	test.NoError(t, err)
 }
@@ -41,7 +41,7 @@ func TestReadme2(t *testing.T) {
 	g.Add("div_", ``) // return nil
 	g.Add("num", `/\d+/`)
 
-	ast, err := g.Parse("div", []byte(`40/10/2`))
+	ast, err := g.Parse("div", "", []byte(`40/10/2`))
 	t.Logf("%+v (%v)", ast, err)
 	test.NoError(t, err)
 }
@@ -87,7 +87,7 @@ func TestReadme3(t *testing.T) {
 	})
 	g.Add("op", `/\d+/`)
 
-	ast, err := g.Parse("add", []byte(`1+2*(3+4)`))
+	ast, err := g.Parse("add", "", []byte(`1+2*(3+4)`))
 	t.Logf("%#v (%v)", ast, err)
 	test.NoError(t, err)
 }

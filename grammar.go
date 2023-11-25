@@ -84,11 +84,12 @@ func (this *Grammar) Verify() error {
 
 // parse the given text using the named alternative
 // check for unparsed text
-func (this *Grammar) Parse(name string, text []byte) (any, error) {
+func (this *Grammar) Parse(name string, fname string, text []byte) (any, error) {
 	t0 := time.Now()
 	p := pos{
-		g:   this,
-		src: text,
+		g:    this,
+		file: fname,
+		src:  text,
 	}
 	out, err := p.ConsumeAlt(this.alts[name])
 

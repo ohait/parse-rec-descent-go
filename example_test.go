@@ -45,7 +45,7 @@ func TestManualAssoc(t *testing.T) {
 	g.Add("lit", `/\d+/`).Return(func(v string) any { return Lit{v} })
 
 	test.NoError(t, g.Verify())
-	out, err := g.Parse("add", []byte(`1+2+3`))
+	out, err := g.Parse("add", "", []byte(`1+2+3`))
 	test.NoError(t, err)
 	t.Logf("%+v", out)
 }
@@ -76,17 +76,17 @@ func TestGrammar(t *testing.T) {
 	t.Logf("lit: %+v", g.alts["lit"][0])
 
 	{
-		out, err := g.Parse("expr", []byte("1+2"))
+		out, err := g.Parse("expr", "", []byte("1+2"))
 		test.NoError(t, err)
 		t.Logf("%+v", out)
 	}
 	{
-		out, err := g.Parse("expr", []byte("1+3*2"))
+		out, err := g.Parse("expr", "", []byte("1+3*2"))
 		test.NoError(t, err)
 		t.Logf("%+v", out)
 	}
 	{
-		out, err := g.Parse("expr", []byte("1+2+3"))
+		out, err := g.Parse("expr", "", []byte("1+2+3"))
 		test.NoError(t, err)
 		t.Logf("%+v", out)
 	}

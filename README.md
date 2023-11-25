@@ -27,7 +27,7 @@ g.Add("lit", `/\d+/`).Return(
 
 err := g.Verify() // make sure no production link to empty ones
 
-out, err := g.Parse("add", []byte("1+2+3")) // returns BinOp{BinOp{1, "+", 2}, "+", 3}
+out, err := g.Parse("add", "", []byte("1+2+3")) // returns BinOp{BinOp{1, "+", 2}, "+", 3}
 ```
 
 ## How it works
@@ -63,7 +63,7 @@ Each time another production of the same alternation is checked, the position of
 When a production matches, it generates a list of matching arguments.
 
 By default, if the list is empty, `nil` is returned.
-If only 1 element is present, the element itself is returned.
+If only 1 element is present, the element itself is returned;
 otherwise the list is returned.
 
 Users can modify this behaviour by setting a custom function.
@@ -144,7 +144,7 @@ One of the side effects of this approach is that it associate to the right inste
 
 With a simple grammar like the one above, it easy to make sense of the output tree:
 ```go
-  ast, out := g.Parse("div", []byte("40/10/2"))
+  ast, out := g.Parse("div", "", []byte("40/10/2"))
   // ast => [40 [10 [2 <nil>]]]
 ```
 
@@ -260,7 +260,7 @@ Expanding from the examples above, we could add parenthesis and proper `Return()
 Which can parse complex expressions like:
 
 ```go
-	ast, err := g.Parse("add", []byte(`1+2*(3+4)`))
+	ast, err := g.Parse("add", "", []byte(`1+2*(3+4)`))
 
   BinOp{
     Left:"1",
@@ -278,4 +278,10 @@ Which can parse complex expressions like:
     },
   }
 ```
+
+## `Grammar{}.Parse(prod, filename string, src []byte)`  
+
+Parses the given `src` using the prod named `prod`.
+
+The `filename` is passed along on all the `Return()` actions in the `Pos{}`: it's only useful when multiple files are given
 

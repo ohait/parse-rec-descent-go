@@ -10,11 +10,19 @@ import (
 type Pos struct {
 	From int
 	End  int
+	File string
 	Src  []byte
 }
 
 func (this Pos) String() string {
-	return fmt.Sprintf("%d-%d", this.From, this.End)
+	if this.File == "" {
+		return fmt.Sprintf("%d-%d", this.From, this.End)
+	}
+	return fmt.Sprintf("%s:%d-%d", this.File, this.From, this.End)
+}
+
+func (this Pos) GoString() string {
+	return fmt.Sprintf("parse.Pos{%q:%s}", this.File, this.Extract(100))
 }
 
 func (this Pos) Extract(maxLines int) string {
@@ -32,6 +40,7 @@ func (this Pos) Extract(maxLines int) string {
 
 type pos struct {
 	g      *Grammar
+	file   string
 	src    []byte
 	at     int
 	end    int
