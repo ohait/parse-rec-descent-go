@@ -82,16 +82,20 @@ func (this *Grammar) Verify() error {
 	return nil
 }
 
+func (this *Grammar) Parse(prodName string, text []byte) (any, error) {
+	return this.ParseFile(prodName, "", text)
+}
+
 // parse the given text using the named alternative
 // check for unparsed text
-func (this *Grammar) Parse(name string, fname string, text []byte) (any, error) {
+func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (any, error) {
 	t0 := time.Now()
 	p := pos{
 		g:    this,
-		file: fname,
+		file: fileName,
 		src:  text,
 	}
-	out, err := p.ConsumeAlt(this.alts[name])
+	out, err := p.ConsumeAlt(this.alts[prodName])
 
 	if err != nil {
 		return out, err

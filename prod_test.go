@@ -57,7 +57,7 @@ func TestDescent(t *testing.T) {
 		}
 		g.Add("main", `word word`)
 		g.Add("word", `/\w+/`).WS = Whitespaces
-		out, err := g.Parse("main", "", []byte(" foo\t\nbar\n"))
+		out, err := g.Parse("main", []byte(" foo\t\nbar\n"))
 		test.NoError(t, err)
 		test.EqualsGo(t, []any{"foo", "bar"}, out)
 	}
@@ -89,14 +89,14 @@ func TestNoAction(t *testing.T) {
 	{
 		var g Grammar
 		g.Add("main", `/a+/`)
-		out, err := g.Parse("main", "", []byte("aa"))
+		out, err := g.Parse("main", []byte("aa"))
 		test.NoError(t, err)
 		test.EqualsGo(t, `aa`, out)
 	}
 	{
 		var g Grammar
 		g.Add("main", ``)
-		out, err := g.Parse("main", "", []byte(""))
+		out, err := g.Parse("main", []byte(""))
 		test.NoError(t, err)
 		test.EqualsGo(t, nil, out)
 	}
@@ -104,7 +104,7 @@ func TestNoAction(t *testing.T) {
 		var g Grammar
 		g.Add("main", `word word`)
 		g.Add("word", `/\w+/`).WS = Whitespaces
-		out, err := g.Parse("main", "", []byte("xyz foo"))
+		out, err := g.Parse("main", []byte("xyz foo"))
 		test.NoError(t, err)
 		test.EqualsGo(t, []any{"xyz", "foo"}, out)
 	}
@@ -117,7 +117,7 @@ func TestSpace(t *testing.T) {
 		}
 		g.Add("main", `word word`)
 		g.Add("word", `/\w+/`).WS = Whitespaces
-		out, err := g.Parse("main", "", []byte("  foo\n\tfoo\n"))
+		out, err := g.Parse("main", []byte("  foo\n\tfoo\n"))
 		test.NoError(t, err)
 		test.EqualsJSON(t, []any{"foo", "foo"}, out)
 	}
@@ -130,7 +130,7 @@ func TestSpace(t *testing.T) {
 		g.Add("words", `word words`).Return(func(l string, tail []string) []string { return append([]string{l}, tail...) })
 		g.Add("words", ``).Return(func() []string { return nil })
 		g.Add("word", `/\w+/`).WS = CommentsAndWhitespaces
-		out, err := g.Parse("main", "", []byte("1 // ignore\n\t2\n 3//"))
+		out, err := g.Parse("main", []byte("1 // ignore\n\t2\n 3//"))
 		test.NoError(t, err)
 		test.EqualsJSON(t, []any{"1", "2", "3"}, out)
 	}
@@ -148,7 +148,7 @@ func TestBaseAction(t *testing.T) {
 			return "", fmt.Errorf("expected same word, got %q and %q", left, right)
 		})
 		g.Add("word", `/\w+/`).WS = Whitespaces
-		out, err := g.Parse("main", "", []byte("foo foo"))
+		out, err := g.Parse("main", []byte("foo foo"))
 		test.NoError(t, err)
 		test.EqualsGo(t, "foo", out)
 	}
@@ -162,7 +162,7 @@ func TestBaseAction(t *testing.T) {
 			t.Logf("%q => %d - %d", s, p.End, p.From)
 			return p.End - p.From
 		}).WS = Whitespaces
-		out, err := g.Parse("main", "", []byte("xyz foobar"))
+		out, err := g.Parse("main", []byte("xyz foobar"))
 		test.NoError(t, err)
 		test.EqualsGo(t, 10, out)
 	}
@@ -178,7 +178,7 @@ func TestCommit(t *testing.T) {
 			return nil
 		})
 		g.Add("word", `/\w+/`)
-		_, err := g.Parse("parens", "", []byte(`(foobar`))
+		_, err := g.Parse("parens", []byte(`(foobar`))
 		test.Contains(t, err.Error(), ")")
 	}
 }
@@ -190,11 +190,11 @@ func TestNegative(t *testing.T) {
 		g.Add("add", `word "+" !"a" + word`)
 		g.Add("word", `/\w+/`)
 		{
-			_, err := g.Parse("add", "", []byte(`a+abc`))
+			_, err := g.Parse("add", []byte(`a+abc`))
 			test.Contains(t, err.Error(), "a")
 		}
 		{
-			_, err := g.Parse("add", "", []byte(`a+bcd`))
+			_, err := g.Parse("add", []byte(`a+bcd`))
 			test.NoError(t, err)
 		}
 	}
