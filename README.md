@@ -182,6 +182,36 @@ Which for the example above `40/10/2` would return:
 
 Which is easier to read, can be further specialized, and it correctly associate to the left.
 
+### repetition (WIP)
+
+you can use repetitions to simplify the grammars:
+
+```go
+    g.Add("div", `num(s "/")`).Return(func(op []Op) Op {
+        // group  
+        out := op[0]
+        for _, e := range op[1:] {
+            out = BinOp{
+                Left: out,
+                Op: "/",
+                Right: e
+            }
+        }
+        return out
+    })
+    g.Add("num", `/\d+/`).Return(func(s string) Op {
+        return Lit{s}
+    })
+```
+
+The repetition above parses the given directive `num` one or more times, separated by `"/"`.
+
+The matches are coerced into `[]Op`, and the separator is skipped since it's in double quotes.
+
+separators can also be regex (`num(s /,/`), or other alternations (`num(s comma)`) and in those cases
+the separators will be added to the array, so you might need to use `[]any` if you mix regex (which
+will return `string`) and named directive (which could return other types).
+
 
 ### Precedence
 

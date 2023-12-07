@@ -5,9 +5,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Aize-Public/forego/ctx"
+	"github.com/Aize-Public/forego/ctx/log"
 )
 
 type Grammar struct {
@@ -24,10 +28,31 @@ type Grammar struct {
 		ParseCt      int
 		ParseElapsed time.Duration
 	}
+
+	repCt atomic.Int32
 }
 
 func (this Grammar) String() string {
+	if this.Stats.ParseCt == 0 {
+		return fmt.Sprintf("parse.Grammar{%d/%d}", this.Stats.Productions, this.Stats.Alternations)
+	}
 	return fmt.Sprintf("parse.Grammar{%d/%d %v}", this.Stats.Productions, this.Stats.Alternations, this.Stats.ParseElapsed/time.Duration(this.Stats.ParseCt))
+}
+
+func (this Grammar) Dump() string {
+	var keys []string
+	for name := range this.alts {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+	var list []string
+	for _, name := range keys {
+		alt := this.alts[name]
+		for _, p := range alt {
+			list = append(list, fmt.Sprintf("%s: %s", name, p.Directive))
+		}
+	}
+	return strings.Join(list, "\n") + "\n"
 }
 
 var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
@@ -54,8 +79,9 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		Directive: directives,
 		src:       fmt.Sprintf("%s:%d", file, line),
 	}
-	err := p.build()
+	_, err := p.build("")
 	if err != nil {
+		log.Errorf(nil, "can't create prod %q: %v", name, err)
 		panic(err)
 	}
 	list := append(this.alts[name], p)

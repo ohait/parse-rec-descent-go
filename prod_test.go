@@ -14,7 +14,7 @@ func TestRegex(t *testing.T) {
 			g:         &g,
 			Directive: `/\S+/`,
 		}
-		err := p.build()
+		_, err := p.build("")
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 1, len(p.actions))
@@ -35,7 +35,7 @@ func TestText(t *testing.T) {
 			g:         &g,
 			Directive: `/\S+/`,
 		}
-		err := p.build()
+		_, err := p.build("")
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 1, len(p.actions))
@@ -68,7 +68,7 @@ func TestDirectiveParsing(t *testing.T) {
 		p := Prod{
 			Directive: "/a/ /cd/",
 		}
-		err := p.build()
+		_, err := p.build("")
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 2, len(p.actions))
@@ -78,7 +78,7 @@ func TestDirectiveParsing(t *testing.T) {
 			Directive: `/a\/b/`,
 		}
 		t.Logf("in: `%s`", p.Directive)
-		err := p.build()
+		_, err := p.build("")
 		test.NoError(t, err)
 		t.Logf("act: %+v", p.actions)
 		test.EqualsGo(t, 1, len(p.actions))
@@ -198,4 +198,34 @@ func TestNegative(t *testing.T) {
 			test.NoError(t, err)
 		}
 	}
+}
+
+func TestAssocSimple(t *testing.T) {
+	var g Grammar
+	g.Log = t.Logf
+	g.Add("ident", `/[a-zA-Z]\w+/`).Return(func(s string) string {
+		return s
+	}).WS = Whitespaces
+	g.Add("list", `"list:" ident(s)`).Return(func(list []string) []string {
+		return list
+	})
+	t.Logf("%s", g.Dump())
+	out, err := g.Parse("list", []byte(`list: adam john`))
+	test.NoError(t, err)
+	test.EqualsJSON(t, `["adam","john"]`, out)
+}
+
+func TestAssocSep(t *testing.T) {
+	var g Grammar
+	g.Log = t.Logf
+	g.Add("ident", `/[a-zA-Z]\w+/`).Return(func(s string) string {
+		return s
+	}).WS = Whitespaces
+	g.Add("list", `"list:" ident(s ",")`).Return(func(list []string) []string {
+		return list
+	}).WS = Whitespaces
+	t.Logf("%s", g.Dump())
+	out, err := g.Parse("list", []byte(`list: adam, john ,luke`))
+	test.NoError(t, err)
+	test.EqualsJSON(t, `["adam","john","luke"]`, out)
 }

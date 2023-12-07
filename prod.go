@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"regexp"
 	"strings"
@@ -16,6 +17,9 @@ type Prod struct {
 
 	// what to ignore before any text matching
 	WS *regexp.Regexp
+
+	// override the above
+	wsFrom *Prod
 
 	// Set by Add()
 	Name string
@@ -62,6 +66,13 @@ func (this action) String() string {
 	return s
 }
 
+func (this *Prod) ws() *regexp.Regexp {
+	if this.wsFrom != nil {
+		return this.wsFrom.ws()
+	}
+	return this.WS
+}
+
 func (this action) exec(p *pos) (any, *Error) {
 	if this.commit {
 		p.Log("commit %p", p)
@@ -69,8 +80,9 @@ func (this action) exec(p *pos) (any, *Error) {
 		return nil, nil
 	}
 	if this.re != nil {
-		if this.p.WS != nil {
-			err := p.IgnoreRE(this.p.WS, false)
+		ws := this.p.ws()
+		if ws != nil {
+			err := p.IgnoreRE(ws, false)
 			if err != nil {
 				return nil, p.NewErrorf("can't consume whitespace: %v", err)
 			}
@@ -109,21 +121,72 @@ func (this *Prod) Parse(fname string, in []byte, end *regexp.Regexp) (any, error
 	return out, nil
 }
 
-func (this *Prod) build() error {
+func parseText(d string) (*regexp.Regexp, int, error) {
+	re := regexp.MustCompile(`^"(([^"\\]|\\.)*)"`)
+	m := re.FindStringSubmatch(d)
+	if m == nil {
+		return nil, 0, ctx.NewErrorf(nil, "invalid directive `%s`", d)
+	}
+	re = regexp.MustCompile("^" + regexp.QuoteMeta(m[1]))
+	return re, len(m[0]), nil
+}
+
+func parseRE(d string) (*regexp.Regexp, int, error) {
+	reEnd := regexp.MustCompile(`^/(([^/\\]|\\.)*)/`)
+	m := reEnd.FindStringSubmatch(d)
+	if m == nil {
+		return nil, 0, ctx.NewErrorf(nil, "invalid directive `%s`", d)
+	}
+	d = d[len(m[0]):]
+	re, err := regexp.Compile("^" + m[1])
+	if err != nil {
+		return nil, 0, ctx.NewErrorf(nil, "invalid directive `%s`: %v", m[1], err)
+	}
+	return re, len(m[0]), nil
+}
+
+func (this *Prod) mustBuild(term string) int {
+	ct, err := this.build(term)
+	if err != nil {
+		panic(err)
+	}
+	return ct
+}
+
+func (this *Prod) build(term string) (int, error) {
 	//log.Printf("prod[%q]...", this.Name)
 	this.Directive = strings.TrimSpace(this.Directive)
 	if this.Directive == "" {
 		//this.act = func(p *Pos) ([]any, error) {
 		//	return nil, nil
 		//}
-		return nil
+		return 0, nil
 	}
 
 	negative := false
+	silent := false
 	d := this.Directive
-	for len(d) > 0 {
+	for {
+		//log.Debugf(nil, "REM: `%s`", d)
+		switch term {
+		case "":
+			if d == "" {
+				return 0, nil
+			}
+		default:
+			if strings.HasPrefix(d, term) {
+				return len(this.Directive) - len(d), nil
+			}
+		}
+		if len(d) == 0 {
+			return 0, io.EOF
+		}
 		//log.Printf("parsing %q", d)
 		switch d[0] {
+
+		case '~':
+			silent = true
+			d = d[1:]
 
 		case '!': // negative look ahead
 			negative = true
@@ -143,13 +206,11 @@ func (this *Prod) build() error {
 			panic(m[1])
 
 		case '"':
-			re := regexp.MustCompile(`^"(([^"\\]|\\.)*)"`)
-			m := re.FindStringSubmatch(d)
-			if m == nil {
-				return ctx.NewErrorf(nil, "invalid directive `%s`", d)
+			re, ct, err := parseText(d)
+			if err != nil {
+				return len(this.Directive) - len(d), nil
 			}
-			d = d[len(m[0]):]
-			re = regexp.MustCompile("^" + regexp.QuoteMeta(m[1]))
+			d = d[ct:]
 			this.actions = append(this.actions, action{
 				p:        this,
 				re:       re,
@@ -157,25 +218,23 @@ func (this *Prod) build() error {
 				silent:   true,
 			})
 			negative = false
+			silent = false
 
 		case '/':
-			reEnd := regexp.MustCompile(`^/(([^/\\]|\\.)*)/`)
-			m := reEnd.FindStringSubmatch(d)
-			if m == nil {
-				return ctx.NewErrorf(nil, "invalid directive `%s`", d)
-			}
-			d = d[len(m[0]):]
-			re, err := regexp.Compile("^" + m[1])
+			re, l, err := parseRE(d)
 			if err != nil {
-				return ctx.NewErrorf(nil, "invalid directive `%s`: %v", m[1], err)
+				return len(this.Directive) - len(d), nil
 			}
+			d = d[l:]
 			//log.Printf("prod[%q]: /%s/", this.Name, re)
 			this.actions = append(this.actions, action{
 				p:        this,
 				re:       re,
 				negative: negative,
+				silent:   silent,
 			})
 			negative = false
+			silent = false
 
 		case ' ', '\t', '\n', '\r': // ignore whitespace
 			d = d[1:]
@@ -184,20 +243,119 @@ func (this *Prod) build() error {
 			re := regexp.MustCompile(`(\w+)`)
 			m := re.FindStringSubmatch(d)
 			if m == nil {
-				return ctx.NewErrorf(nil, "invalid directive: %q", d)
+				return len(this.Directive) - len(d), ctx.NewErrorf(nil, "invalid directive: %q", d)
 			}
 			d = d[len(m[0]):]
 			name := m[1]
+
+			if len(d) > 2 {
+				//log.Debugf(nil, "REPEAT: `%s`", d)
+				switch d[0:1] {
+				case "(":
+					d = d[1:]
+					if negative {
+						return 0, ctx.NewErrorf(nil, "can't do a negative lookahead with repetition")
+					}
+					temp := &Prod{
+						Directive: d,
+					}
+					ct, err := temp.build(")")
+					if err != nil {
+						return len(this.Directive) - len(d), ctx.NewErrorf(nil, "invalid repetition: %v", err)
+					}
+
+					// internal names for the new alternations
+					repName := fmt.Sprintf("%s,rep%d", this.Name, this.g.repCt.Add(1))
+					repRep := repName + "_"
+
+					rep := d[0:ct]
+					d = d[ct+1:]
+					//log.Debugf(nil, "REPEAT: %+v", temp)
+					var sepAction *action
+					switch len(temp.actions) {
+					case 1: // simple
+					case 2: // with separator
+						sepAction = &temp.actions[1]
+					default:
+						return 0, ctx.NewErrorf(nil, "invalid repetition: `%s`", rep)
+					}
+
+					// TODO(oha) allow for other options like `?` or `s?` or `3` or `3..5` or `..5` etc
+					switch temp.actions[0].prod {
+					case "s":
+					default:
+						return 0, ctx.NewErrorf(nil, "expected valid repetition, got `%s`", rep)
+					}
+
+					// external prod, catches `name` and then repetitions
+					p1 := &Prod{
+						g:         this.g,
+						Directive: name + " " + repRep,
+						Name:      repName,
+						src:       this.src,
+						wsFrom:    this,
+					}
+					p1.actions = append(p1.actions, action{p: p1, prod: name})
+					p1.actions = append(p1.actions, action{p: p1, prod: repRep})
+					p1.Return(func(l any, r []any) []any {
+						return append([]any{l}, r...)
+					})
+
+					// internal prod, catches `sep` and `name` and then itself
+					p2 := &Prod{
+						g:      this.g,
+						Name:   repRep,
+						src:    this.src,
+						wsFrom: this,
+					}
+					p2.Directive = name + " " + repRep
+					if sepAction != nil {
+						sepAction.p = p2
+						p2.actions = append(p2.actions, *sepAction)
+						p2.Directive = sepAction.prod + " " + p2.Directive
+					}
+					p2.actions = append(p2.actions, action{p: p2, prod: name})
+					p2.actions = append(p2.actions, action{p: p2, prod: repRep})
+
+					if sepAction != nil && !sepAction.silent {
+						p2.Return(func(sep any, l any, r []any) []any {
+							return append([]any{sep, l}, r...)
+						})
+					} else {
+						p2.Return(func(l any, r []any) []any {
+							return append([]any{l}, r...)
+						})
+					}
+
+					// empty fallback, when reaching the end
+					p3 := &Prod{
+						g:         this.g,
+						Directive: "",
+						Name:      repRep,
+						src:       this.src,
+						wsFrom:    this,
+					}
+					p3.mustBuild("")
+					p3.Return(func() []any { return []any{} })
+					this.g.alts[repName] = Alt{p1}
+					this.g.alts[repRep] = Alt{p2, p3}
+
+					name = repName // replace name with repName to use the above
+
+				default:
+				}
+
+			}
 			this.actions = append(this.actions, action{
 				p:        this,
 				prod:     name,
 				negative: negative,
+				silent:   silent,
 			})
 			negative = false
+			silent = false
 		}
 	}
-
-	return nil
 }
 
 func (this *Prod) verify() error {
@@ -254,11 +412,6 @@ func (this *Prod) exec(p *pos) (any, *Error) {
 		p.Log("return %v", out)
 		return out, nil
 	}
-}
-
-func (this *Prod) SetWS(ws string) *Prod {
-	this.WS = regexp.MustCompile(ws)
-	return this
 }
 
 // set a new return

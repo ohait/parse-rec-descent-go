@@ -1,6 +1,8 @@
 package parse
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -14,12 +16,14 @@ type Pos struct {
 	Src  []byte
 }
 
+/*
 func (this Pos) String() string {
 	if this.File == "" {
 		return fmt.Sprintf("%d-%d", this.From, this.End)
 	}
 	return fmt.Sprintf("%s:%d-%d", this.File, this.From, this.End)
 }
+*/
 
 func (this Pos) GoString() string {
 	return fmt.Sprintf("parse.Pos{%q:%s}", this.File, this.Extract(100))
@@ -36,6 +40,18 @@ func (this Pos) Extract(maxLines int) string {
 		return strings.Join(parts, "\n")
 	}
 	return s
+}
+
+func (this Pos) String() string {
+	ct := bytes.Count(this.Src[0:this.From], []byte(`\n`))
+	if this.File == "" {
+		return fmt.Sprintf("%d:%d-%d", ct, this.From, this.End)
+	}
+	return fmt.Sprintf("%s:%d:%d-%d", this.File, ct, this.From, this.End)
+}
+
+func (this Pos) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.String())
 }
 
 type pos struct {
