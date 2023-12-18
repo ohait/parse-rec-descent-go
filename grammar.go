@@ -32,14 +32,14 @@ type Grammar struct {
 	repCt atomic.Int32
 }
 
-func (this Grammar) String() string {
+func (this *Grammar) String() string {
 	if this.Stats.ParseCt == 0 {
 		return fmt.Sprintf("parse.Grammar{%d/%d}", this.Stats.Productions, this.Stats.Alternations)
 	}
 	return fmt.Sprintf("parse.Grammar{%d/%d %v}", this.Stats.Productions, this.Stats.Alternations, this.Stats.ParseElapsed/time.Duration(this.Stats.ParseCt))
 }
 
-func (this Grammar) Dump() string {
+func (this *Grammar) Dump() string {
 	var keys []string
 	for name := range this.alts {
 		keys = append(keys, name)

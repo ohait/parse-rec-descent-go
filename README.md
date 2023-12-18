@@ -87,9 +87,9 @@ or error reporting
 
 ## commit 
 
-The special directive `!` an be added in the middle of a production to specify that no further alternatives must be tried.
+The special directive `+` can be added in the middle of a production to specify that no further alternatives must be tried.
 
-This both reduce the backtracking but also improves the error reporting
+If the production fails, the error is marked as `commit` and no other alternations will be tried, even on the calling productions.
 
 
 ## error

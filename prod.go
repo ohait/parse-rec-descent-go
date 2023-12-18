@@ -407,7 +407,7 @@ func (this *Prod) exec(p *pos) (any, *Error) {
 		//if this.G.Log != nil { this.G.Log("ret(%v, %v)", in, out) }
 		out, err := this.ret(from, p, list)
 		if err != nil {
-			return out, &Error{err, p.at}
+			return out, &Error{err, p.at, p.commit}
 		}
 		p.Log("return %v", out)
 		return out, nil

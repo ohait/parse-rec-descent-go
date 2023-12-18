@@ -61,7 +61,7 @@ type pos struct {
 	at     int
 	end    int
 	stack  []string
-	commit bool
+	commit bool // true if the current production is committed, used for errors
 	p      *Prod
 }
 
@@ -170,14 +170,14 @@ func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
 		p := *this
 		p.commit = false
 		p.push(fmt.Sprintf("%s/%d", prod.Name, n))
-		p.Log("trying %s[%s] `%s` ", prod.Name, prod.src, prod.Directive)
+		p.Log("trying %s/%d[%s] `%s` ", prod.Name, n, prod.src, prod.Directive)
 		out, err := prod.exec(&p)
 
 		if err == nil {
 			this.at = p.at
 			return out, nil
 		}
-		if p.commit {
+		if err.commit {
 			if err != nil {
 				p.Log("failed+commit %s[%s]: %v", prod.Name, prod.src, err)
 			}
@@ -201,13 +201,15 @@ func (this *pos) NewErrorf(f string, args ...any) *Error {
 	return &Error{
 		err: fmt.Errorf(f, args...),
 		//err: ctx.NewErrorf(nil, f, args...),
-		at: this.at,
+		at:     this.at,
+		commit: this.commit,
 	}
 }
 
 type Error struct {
-	err error
-	at  int
+	err    error
+	at     int
+	commit bool
 }
 
 func (this Error) Error() string { return fmt.Sprintf("%v at %d", this.err, this.at) }

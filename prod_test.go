@@ -172,13 +172,18 @@ func TestCommit(t *testing.T) {
 	{
 		var g Grammar
 		g.Log = t.Logf
+		g.Add("op", `parens`)
+		g.Add("op", ``).Return(func() any {
+			t.Fatalf("commit not honored 1 level above")
+			return nil
+		})
 		g.Add("parens", `"(" + word ")"`)
 		g.Add("parens", ``).Return(func() any {
 			t.Fatalf("commit not honored")
 			return nil
 		})
 		g.Add("word", `/\w+/`)
-		_, err := g.Parse("parens", []byte(`(foobar`))
+		_, err := g.Parse("op", []byte(`(foobar`))
 		test.Contains(t, err.Error(), ")")
 	}
 }
