@@ -104,9 +104,10 @@ func (this action) exec(p *pos) (any, *Error) {
 // helper
 func (this *Prod) Parse(fname string, in []byte, end *regexp.Regexp) (any, error) {
 	p := &pos{
-		g:    this.g,
-		file: fname,
-		src:  in,
+		g:     this.g,
+		file:  fname,
+		src:   in,
+		stats: &Stats{},
 	}
 	out, err := p.ConsumeAlt(Alt{this})
 	if err != nil {

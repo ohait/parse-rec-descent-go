@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 type Pos struct {
@@ -54,6 +55,13 @@ func (this Pos) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.String())
 }
 
+type Stats struct {
+	Alternations    int // how many alternations were tested
+	ParseTime       time.Duration
+	BacktrackCount  int
+	BacktrackAmount int // how many bytes were backtracked
+}
+
 type pos struct {
 	g      *Grammar
 	file   string
@@ -63,6 +71,7 @@ type pos struct {
 	stack  []string
 	commit bool // true if the current production is committed, used for errors
 	p      *Prod
+	stats  *Stats
 }
 
 func (this *pos) Log(f string, args ...any) {
@@ -151,6 +160,7 @@ func (this *pos) pop() {
 // first that succeed is returned
 // if none succeed the first error is returned
 func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
+	this.stats.Alternations++
 	switch len(alt) {
 	case 0:
 		panic("no alternatives") // Verify() woudl have catched this
@@ -184,6 +194,8 @@ func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
 			this.at = p.at
 			return out, err
 		}
+		this.stats.BacktrackAmount += p.at - this.at
+		this.stats.BacktrackCount++
 		p.Log("failed %s[%s]: %v", prod.Name, prod.src, err)
 		errs = append(errs, err)
 	}

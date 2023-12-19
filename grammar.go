@@ -29,7 +29,7 @@ type Grammar struct {
 		ParseElapsed time.Duration
 	}
 
-	repCt atomic.Int32
+	repCt atomic.Int32 // used to create internal names
 }
 
 func (this *Grammar) String() string {
@@ -95,9 +95,9 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 // build the grammar, returns an error if the grammar is not complete
 func (this *Grammar) Verify() error {
 	for name, alt := range this.alts {
-		if this.Log != nil {
-			this.Log("build[%q]", name)
-		}
+		//if this.Log != nil {
+		//	this.Log("build[%q]", name)
+		//}
 		for _, p := range alt {
 			err := p.verify()
 			if err != nil {
@@ -108,34 +108,56 @@ func (this *Grammar) Verify() error {
 	return nil
 }
 
-func (this *Grammar) Parse(prodName string, text []byte) (any, error) {
+func (this *Grammar) Analyze() {
+	w := map[string]float64{}
+	names := []string{}
+	for name, alt := range this.alts {
+		names = append(names, name)
+		w[name] = alt.weight(8)
+	}
+	lists.SortFunc(names, func(n string) float64 {
+		return -w[n]
+	})
+	for _, name := range names {
+		srcs := []string{}
+		for _, p := range this.alts[name] {
+			srcs = append(srcs, p.src)
+		}
+		this.Log("%q %.2f (%s)", name, w[name], strings.Join(srcs, " "))
+	}
+}
+
+func (this *Grammar) Parse(prodName string, text []byte) (any, Stats, error) {
 	return this.ParseFile(prodName, "", text)
 }
 
 // parse the given text using the named alternative
 // check for unparsed text
-func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (any, error) {
+func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (any, Stats, error) {
+	var s Stats
 	t0 := time.Now()
 	p := pos{
-		g:    this,
-		file: fileName,
-		src:  text,
+		g:     this,
+		file:  fileName,
+		src:   text,
+		stats: &s,
 	}
 	out, err := p.ConsumeAlt(this.alts[prodName])
 
 	if err != nil {
-		return out, err
+		return out, s, err
 	}
 
 	if this.End != nil {
 		p.IgnoreRE(this.End, false)
 	}
 	if p.Rem(10) != "" {
-		return out, ctx.NewErrorf(nil, "unparsed: %q", p.Rem(80))
+		return out, s, ctx.NewErrorf(nil, "unparsed: %q", p.Rem(80))
 	}
 
 	dt := time.Since(t0)
 	this.Stats.ParseCt++
 	this.Stats.ParseElapsed += dt
-	return out, nil
+	s.ParseTime = dt
+	return out, s, nil
 }
