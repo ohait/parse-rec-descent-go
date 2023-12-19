@@ -12,6 +12,30 @@ import (
 
 type Alt []*Prod
 
+func (this Alt) weight(maxDepth int) float64 {
+	if maxDepth == 0 {
+		return 1
+	}
+	x := 1.0
+	for _, p := range this {
+		x *= p.weight(maxDepth)
+	}
+	return x
+}
+
+func (this Prod) weight(maxDepth int) float64 {
+	w := 1.0
+	for _, act := range this.actions {
+		if act.commit {
+			return w / 2
+		}
+		if act.prod != "" {
+			w = w*2 + act.p.g.alts[act.prod].weight(maxDepth-1)*0.75
+		}
+	}
+	return w
+}
+
 type Prod struct {
 	g *Grammar
 
