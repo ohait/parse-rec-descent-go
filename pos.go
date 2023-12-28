@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -14,7 +13,7 @@ type Pos struct {
 	From int
 	End  int
 	File string
-	Src  []byte
+	Src  *Src
 }
 
 /*
@@ -31,7 +30,10 @@ func (this Pos) GoString() string {
 }
 
 func (this Pos) Extract(maxLines int) string {
-	s := string(this.Src[this.From:this.End])
+	if this.Src == nil {
+		return "<" + this.File + ">"
+	}
+	s := string(this.Src.bytes[this.From:this.End])
 	if maxLines == 0 {
 		return s
 	}
@@ -44,11 +46,11 @@ func (this Pos) Extract(maxLines int) string {
 }
 
 func (this Pos) String() string {
-	ct := bytes.Count(this.Src[0:this.From], []byte(`\n`))
+	line := this.Src.Line(this.From)
 	if this.File == "" {
-		return fmt.Sprintf("%d:%d-%d", ct, this.From, this.End)
+		return fmt.Sprintf("%d:%d-%d", line, this.From, this.End)
 	}
-	return fmt.Sprintf("%s:%d:%d-%d", this.File, ct, this.From, this.End)
+	return fmt.Sprintf("%s:%d:%d-%d", this.File, line, this.From, this.End)
 }
 
 func (this Pos) MarshalJSON() ([]byte, error) {
@@ -65,7 +67,7 @@ type Stats struct {
 type pos struct {
 	g      *Grammar
 	file   string
-	src    []byte
+	src    *Src
 	at     int
 	end    int
 	stack  []string
@@ -97,7 +99,7 @@ func (this *pos) Log(f string, args ...any) {
 }
 
 func (this *pos) Rem(max int) string {
-	rem := this.src[this.at:]
+	rem := this.src.bytes[this.at:]
 	if len(rem) > max {
 		rem = rem[0:max]
 	}
@@ -105,7 +107,7 @@ func (this *pos) Rem(max int) string {
 }
 
 func (this *pos) IgnoreRE(re *regexp.Regexp, negative bool) error {
-	m := re.Find(this.src[this.at:])
+	m := re.Find(this.src.bytes[this.at:])
 	if m == nil {
 		if negative {
 			return nil
@@ -125,7 +127,7 @@ func (this *pos) IgnoreRE(re *regexp.Regexp, negative bool) error {
 }
 
 func (this *pos) ConsumeRE(re *regexp.Regexp, negative bool) (string, *Error) {
-	m := re.FindIndex(this.src[this.at:])
+	m := re.FindIndex(this.src.bytes[this.at:])
 	if m == nil {
 		if negative {
 			this.Log("✅ NEG AHEAD /%v/", re)
@@ -137,7 +139,7 @@ func (this *pos) ConsumeRE(re *regexp.Regexp, negative bool) (string, *Error) {
 	if m[0] != 0 {
 		panic("re must match from the beginnin")
 	}
-	out := this.src[this.at : this.at+m[1]]
+	out := this.src.bytes[this.at : this.at+m[1]]
 	if negative {
 		//this.at += m[1]
 		this.Log("❌ NEG AHEAD %q", out)

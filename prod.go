@@ -130,7 +130,7 @@ func (this *Prod) Parse(fname string, in []byte, end *regexp.Regexp) (any, error
 	p := &pos{
 		g:     this.g,
 		file:  fname,
-		src:   in,
+		src:   &Src{bytes: in},
 		stats: &Stats{},
 	}
 	out, err := p.ConsumeAlt(Alt{this})

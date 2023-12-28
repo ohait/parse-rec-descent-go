@@ -20,7 +20,7 @@ func TestRegex(t *testing.T) {
 		test.EqualsGo(t, 1, len(p.actions))
 		pos := pos{
 			g:   &g,
-			src: []byte("foo bar"),
+			src: &Src{bytes: []byte("foo bar")},
 		}
 		out, err := p.actions[0].exec(&pos)
 		test.NoError(t, err)
@@ -41,7 +41,7 @@ func TestText(t *testing.T) {
 		test.EqualsGo(t, 1, len(p.actions))
 		pos := pos{
 			g:   &g,
-			src: []byte("foo bar"),
+			src: &Src{bytes: []byte("foo bar")},
 		}
 		out, err := p.actions[0].exec(&pos)
 		test.NoError(t, err)

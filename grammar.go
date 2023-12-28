@@ -140,7 +140,7 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 	p := pos{
 		g:     this,
 		file:  fileName,
-		src:   text,
+		src:   &Src{bytes: text},
 		stats: &s,
 	}
 	out, err := p.ConsumeAlt(this.alts[prodName])
