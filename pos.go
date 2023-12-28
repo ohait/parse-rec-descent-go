@@ -16,6 +16,15 @@ type Pos struct {
 	Src  *Src
 }
 
+func NewPos(filename string, in []byte) Pos {
+	return Pos{
+		File: filename,
+		Src: &Src{
+			bytes: in,
+		},
+	}
+}
+
 /*
 func (this Pos) String() string {
 	if this.File == "" {
