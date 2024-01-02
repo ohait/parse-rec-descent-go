@@ -7,6 +7,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/Aize-Public/forego/ctx"
+	"github.com/Aize-Public/forego/enc"
 )
 
 type Pos struct {
@@ -170,7 +173,7 @@ func (this *pos) pop() {
 // try to consume each of the alternatives in the given order
 // first that succeed is returned
 // if none succeed the first error is returned
-func (this *pos) ConsumeAlt(alt Alt) (any, *Error) {
+func (this *pos) consumeAlt(alt alt) (any, *Error) {
 	this.stats.Alternations++
 	switch len(alt) {
 	case 0:
@@ -235,5 +238,16 @@ type Error struct {
 	commit bool
 }
 
+var _ json.Marshaler = &Error{}
+var _ enc.Marshaler = &Error{}
+
 func (this Error) Error() string { return fmt.Sprintf("%v at %d", this.err, this.at) }
 func (this Error) Unwrap() error { return this.err }
+
+func (this *Error) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.Error())
+}
+
+func (this *Error) MarshalNode(c ctx.C) (enc.Node, error) {
+	return enc.String(this.Error()), nil
+}

@@ -55,8 +55,8 @@ func TestDescent(t *testing.T) {
 			Log: t.Logf,
 			End: Whitespaces,
 		}
-		g.Add("main", `word word`)
-		g.Add("word", `/\w+/`).WS = Whitespaces
+		g.Alt("main").Add(`word word`, nil)
+		g.Alt("word").Add(`/\w+/`, nil).WS = Whitespaces
 		out, _, err := g.Parse("main", []byte(" foo\t\nbar\n"))
 		test.NoError(t, err)
 		test.EqualsGo(t, []any{"foo", "bar"}, out)

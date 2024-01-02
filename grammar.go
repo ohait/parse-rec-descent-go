@@ -20,7 +20,7 @@ type Grammar struct {
 	// Trailing regexp
 	End *regexp.Regexp
 
-	alts map[string]Alt
+	alts map[string]alt
 	Log  func(f string, args ...any)
 
 	Stats struct {
@@ -59,17 +59,62 @@ func (this *Grammar) Dump() string {
 var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
 var CommentsAndWhitespaces = regexp.MustCompile(`(\s|//[^\n]*\n?)*`)
 
+// return the productions for the given name (can be empty)
+func (this *Grammar) Alt(name string) Alts {
+	return Alts{this, name}
+}
+
+type Alts struct {
+	*Grammar
+	Name string
+}
+
+// Add a production to the given list
+func (this Alts) Add(directives string, fn any) *Prod {
+	if this.Log != nil {
+		this.Log("adding %s: %s", this.Name, directives)
+	}
+	if this.Grammar.alts == nil {
+		this.Grammar.alts = map[string]alt{}
+	}
+	this.Stats.Productions++
+	_, file, line, _ := runtime.Caller(1)
+	file = filepath.Base(file)
+	p := &Prod{
+		g:         this.Grammar,
+		Name:      this.Name,
+		Directive: directives,
+		src:       fmt.Sprintf("%s:%d", file, line),
+	}
+	_, err := p.build("")
+	if err != nil {
+		log.Errorf(nil, "can't create prod %q: %v", this.Name, err)
+		panic(err)
+	}
+	list := append(this.alts[this.Name], p)
+	this.alts[this.Name] = list
+	if len(list) == 1 {
+		this.Stats.Alternations++
+	}
+	if fn == nil {
+		return p
+	}
+	return p.Return(fn)
+}
+
 // Add a new production with the given name and directive
 // if many elements are in the directive, it returns a list of objects
 // otherwise return the only element
 // returns a production that can further be tweaked, adding a Return() action which override the above, and changing the whitespace
 // panics if anything is wrong (you normally don't want to handle the error, since can be seen as a compile time error)
+
+// deprecated: use Grammar{}.Alt(name).Add(directive, func(...))
 func (this *Grammar) Add(name string, directives string) *Prod {
 	if this.Log != nil {
 		this.Log("adding %s: %s", name, directives)
 	}
 	if this.alts == nil {
-		this.alts = map[string]Alt{}
+		this.alts = map[string]alt{}
 	}
 	this.Stats.Productions++
 	_, file, line, _ := runtime.Caller(1)
@@ -143,7 +188,7 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 		src:   &Src{bytes: text},
 		stats: &s,
 	}
-	out, err := p.ConsumeAlt(this.alts[prodName])
+	out, err := p.consumeAlt(this.alts[prodName])
 
 	if err != nil {
 		return out, s, err

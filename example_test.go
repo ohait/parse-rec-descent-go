@@ -30,7 +30,7 @@ func (this Lit) String() string {
 
 func TestManualAssoc(t *testing.T) {
 	var g Grammar
-	g.Add("add", `lit add_`).Return(func(op Op, list []BinOp) (any, error) {
+	g.Alt("add").Add(`lit add_`, func(op Op, list []BinOp) (any, error) {
 		for _, n := range list {
 			n.Left = op
 			op = n

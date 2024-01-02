@@ -10,9 +10,10 @@ import (
 	"github.com/Aize-Public/forego/ctx"
 )
 
-type Alt []*Prod
+// lowercase?
+type alt []*Prod
 
-func (this Alt) weight(maxDepth int) float64 {
+func (this alt) weight(maxDepth int) float64 {
 	if maxDepth == 0 {
 		return 1
 	}
@@ -120,7 +121,7 @@ func (this action) exec(p *pos) (any, *Error) {
 		if len(alt) == 0 {
 			return nil, p.NewErrorf("no prod with name %q", this.prod)
 		}
-		return p.ConsumeAlt(alt)
+		return p.consumeAlt(alt)
 	}
 	return nil, p.NewErrorf("empty action")
 }
@@ -133,7 +134,7 @@ func (this *Prod) Parse(fname string, in []byte, end *regexp.Regexp) (any, error
 		src:   &Src{bytes: in},
 		stats: &Stats{},
 	}
-	out, err := p.ConsumeAlt(Alt{this})
+	out, err := p.consumeAlt(alt{this})
 	if err != nil {
 		return nil, err
 	}
@@ -362,8 +363,8 @@ func (this *Prod) build(term string) (int, error) {
 					}
 					p3.mustBuild("")
 					p3.Return(func() []any { return []any{} })
-					this.g.alts[repName] = Alt{p1}
-					this.g.alts[repRep] = Alt{p2, p3}
+					this.g.alts[repName] = alt{p1}
+					this.g.alts[repRep] = alt{p2, p3}
 
 					name = repName // replace name with repName to use the above
 
