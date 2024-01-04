@@ -5,8 +5,7 @@ It allows for building parser dynamically, with a quasi-BNF syntax:
 
 ```go
 var g parse.Grammar
-g.Add("add", `lit add_`).Return(
-  func(op Op, list []BinOp) (any, error) {
+g.Alt("add").Add(`lit add_`, func(op Op, list []BinOp) (any, error) {
   	for _, n := range list {
   		n.Left = op
   		op = n
@@ -14,14 +13,12 @@ g.Add("add", `lit add_`).Return(
   	return op, nil
   })
 
-g.Add("add_", `/[\+\-]/ lit add_`).Return(
-  func(op string, lit any, tail []BinOp) any {
+g.Alt("add_").Add(`/[\+\-]/ lit add_`, func(op string, lit any, tail []BinOp) any {
   	return append([]BinOp{{Op: op, Right: lit}}, tail...)
   })
-g.Add("add_", ``)
+g.Alt("add_").Add(``, nil)
 
-g.Add("lit", `/\d+/`).Return(
-  func(v string) int {
+g.Alt("lit").Add(`/\d+/`, func(v string) int {
     return strconv.Atoi(v)
   })
 
@@ -42,9 +39,10 @@ Each production can return custom structures, which allow you to generate AST di
 
 ```go
   var g Grammar
-  g.Add("my_prod", `/(\+|-)/ ident`)
-  g.Add("ident", `/[+\-]?\d*/`) // integer
-  g.Add("ident", `/(true|false)/`) // bool
+  g.Alt("my_prod").Add(`/(\+|-)/ ident`, nil)
+
+  g.Alt("ident").Add(`/[+\-]?\d*/`, nil) // integer
+  g.Alt("ident").Add(`/(true|false)/`, nil) // bool
 ```
 
 A grammar is made of several productions, each production has a name and a series of directives.
@@ -58,21 +56,20 @@ First one that succeed will be used, and if none succeed the whole alternation f
 Each time another production of the same alternation is checked, the position of the parser is restored.
 
 
-## Return
+## Return function
 
 When a production matches, it generates a list of matching arguments.
 
-By default, if the list is empty, `nil` is returned.
-If only 1 element is present, the element itself is returned;
-otherwise the list is returned.
-
-Users can modify this behaviour by setting a custom function.
+If the given function is nil, then the result depends on how many directives are there:
+* none: `nil` is returned
+* one: then the output of the directive is returned
+* more: a list with each output is returned
 
 The function will be called when productions succeed, and special `reflect` magic happens under the hood to call the function, so to map some of the
 directive to the arguments.
 
 ```go
-g.Add("x", `a list`).Return(func(a A, list []X) (X, error) {
+g.Alt("x").Add(`a list`, func(a A, list []X) (X, error) {
   return X{a, list}
 })
 g.Add("a", `x`).Return(func(p parse.Pos, x X) A {
@@ -84,6 +81,8 @@ In the example above, you can see how each directive has matching argument, and 
 
 In the second production, you can see how you can add an extra argument (only the first one) which accept a `parse.Pos` which can be useful for debugging
 or error reporting
+
+If the return function returns an error, the production is discarded and the next one tried (unless `commit`)
 
 ## commit 
 
@@ -116,9 +115,9 @@ To parse the example above, you could use the simple grammar:
 
 ```go
   var g Grammar
-  g.Add("div", `num "/" div`) // alt 1: one `num` followed by `/` and then recurse `div` again
-  g.Add("div", `num`)         // alt 2: `num` and nothing else
-  g.Add("num", `/\d+/`)
+  g.Alt("div").Add(`num "/" div`, nil) // alt 1: one `num` followed by `/` and then recurse `div` again
+  g.Alt("div").Add(`num`, nil)         // alt 2: `num` and nothing else
+  g.Alt("num").Add(`/\d+/`, nil)
 ```
 
 This simple example will do the job, but has the side effect be parse multiple time the left side of any `/`. In this case it won't matter much, but if the left side is a very complex expression, all the inefficiency would pile up to a crawl.
@@ -127,10 +126,10 @@ A better approach is to write a grammar like this:
 
 ```go
   var g Grammar
-  g.Add("div", `num div_`) // return [num, [...]
-  g.Add("div_", `"/" num div_`) // return ["/", num, [...]]
-  g.Add("div_", ``) // return nil
-  g.Add("num", `/\d+/`)
+  g.Alt("div").Add(`num div_`, nil) // return [num, [...]
+  g.Alt("div_").Add(`"/" num div_`, nil) // return ["/", num, [...]]
+  g.Alt("div_").Add(``, nil) // return nil
+  g.Alt("num").Add(`/\d+/`, nil)
 ```
 
 While slightly more complicated, it avoids backtracking, since `num` is only parsed at the start, and must succeed.
@@ -273,7 +272,7 @@ Expanding from the examples above, we could add parenthesis and proper `Return()
 	g.Add("add_", ``)
 
 	g.Add("mul", `unary mul_`).Return(leftAssoc)
-	g.Add("mul_", `/(\*|\/|%)/ ! unary mul_`).Return(assocTail).WS = parse.CommentsAndWhitespaces
+	g.Add("mul_", `/(\*|\/|%)/ + unary mul_`).Return(assocTail).WS = parse.CommentsAndWhitespaces
 	g.Add("mul_", ``)
 
 	g.Add("unary", `"-" op`).Return(func(op any) BinOp {
@@ -281,7 +280,7 @@ Expanding from the examples above, we could add parenthesis and proper `Return()
 	})
 	g.Add("unary", `op`)
 
-	g.Add("op", `"(" ! add ")"`).Return(func(op any) Parens {
+	g.Add("op", `"(" + add ")"`).Return(func(op any) Parens {
 		return Parens{op}
 	})
 	g.Add("op", `/\d+/`)
