@@ -77,7 +77,7 @@ func TestReadme3(t *testing.T) {
 	g.Add("mul_", `/(\*|\/|%)/ + unary mul_`).Return(assocTail).WS = parse.CommentsAndWhitespaces
 	g.Add("mul_", ``)
 
-	g.Add("unary", `"-" op`).Return(func(op any) BinOp {
+	g.Add("unary", `"-"+ op`).Return(func(op any) BinOp {
 		return BinOp{Op: "-", Right: op}
 	})
 	g.Add("unary", `op`)

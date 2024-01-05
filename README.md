@@ -290,7 +290,7 @@ Expanding from the examples above, we could add parenthesis and proper `Return()
 	g.Add("mul_", `/(\*|\/|%)/ + unary mul_`).Return(assocTail).WS = parse.CommentsAndWhitespaces
 	g.Add("mul_", ``)
 
-	g.Add("unary", `"-" op`).Return(func(op any) BinOp {
+	g.Add("unary", `"-"+ op`).Return(func(op any) BinOp {
 		return BinOp{Op: "-", Right: op}
 	})
 	g.Add("unary", `op`)
