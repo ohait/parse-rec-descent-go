@@ -240,6 +240,21 @@ The best way to achieve this is to build a grammar that expect expressions neste
 
 By nesting `mul` into `add`, we implicitly enforce higher precedence, because when the parser try to capture multiplication it will happen "earlier"
 
+
+### Negative look-ahead
+
+Can be done by prefixing `!` in front of a directive (either named alternation, regular expression or fixed text).
+
+It will then proceed to match the directive but based on the outcome:
+* if matches it will fail
+* if not matches, it will proceed without consuming anything
+
+This can be useful to prevent a production to spend time parsing complex grammars and then reject it later.
+
+Note: arguably, there is always a better way than using a negative look-ahead, so this is here only to facilitate debugging, but its
+usage is discouraged
+
+
 ### Recursion
 
 Expanding from the examples above, we could add parenthesis and proper `Return()` actions:
