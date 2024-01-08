@@ -86,7 +86,7 @@ func (this action) String() string {
 		return s + "/" + this.re.String() + "/"
 	}
 	if this.prod != "" {
-		return s + `{` + this.prod + `}`
+		return s + this.prod
 	}
 	return s
 }
@@ -412,6 +412,16 @@ func (this *Prod) exec(p *pos) (any, *Error) {
 		//} else {
 		out, err := act.exec(p)
 		if err != nil {
+			if err.commit {
+				// committed error must return directly
+				return nil, err
+			}
+			if p.commit {
+				// if we are committed, but the error isn't, wrap it so it's easier to see where the commit happened
+				err = p.NewErrorf("expected %s got %q", act.String(), p.Rem(10))
+				err.commit = true // and commit!
+			}
+			// return a non-committed error
 			return nil, err
 		}
 		if !act.silent {

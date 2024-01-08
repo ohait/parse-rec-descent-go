@@ -56,7 +56,9 @@ func TestReadme3(t *testing.T) {
 		Op any
 	}
 	var g parse.Grammar
-	//g.Log = t.Logf
+	if testing.Verbose() {
+		g.Log = t.Logf
+	}
 
 	leftAssoc := func(op any, tail []BinOp) any {
 		for _, t := range tail {

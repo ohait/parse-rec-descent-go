@@ -202,9 +202,7 @@ func (this *pos) consumeAlt(alt alt) (any, *Error) {
 			return out, nil
 		}
 		if err.commit {
-			if err != nil {
-				p.Log("failed+commit %s[%s]: %v", prod.Name, prod.src, err)
-			}
+			p.Log("failed+commit %s[%s]: %v", prod.Name, prod.src, err)
 			this.at = p.at
 			return out, err
 		}
@@ -241,7 +239,9 @@ type Error struct {
 var _ json.Marshaler = &Error{}
 var _ enc.Marshaler = &Error{}
 
-func (this Error) Error() string { return fmt.Sprintf("%v at %d", this.err, this.at) }
+func (this Error) Error() string {
+	return fmt.Sprintf("%v at %d", this.err, this.at)
+}
 func (this Error) Unwrap() error { return this.err }
 
 func (this *Error) MarshalJSON() ([]byte, error) {
