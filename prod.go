@@ -10,15 +10,12 @@ import (
 	"github.com/Aize-Public/forego/ctx"
 )
 
-// lowercase?
-type alt []*Prod
-
-func (this alt) weight(maxDepth int) float64 {
+func (this *Alts) weight(maxDepth int) float64 {
 	if maxDepth == 0 {
 		return 1
 	}
 	x := 1.0
-	for _, p := range this {
+	for _, p := range this.prods {
 		x *= p.weight(maxDepth)
 	}
 	return x
@@ -59,7 +56,8 @@ type Prod struct {
 	actions []action
 
 	// function to be used at the end of the production
-	ret func(from int, at *pos, in []any) (any, error)
+	ret     func(from int, at *pos, in []any) (any, error)
+	retType reflect.Type
 }
 
 type action struct {
@@ -72,6 +70,8 @@ type action struct {
 	prod     string
 	re       *regexp.Regexp
 	negative bool // if true, make into a negative lookahead
+
+	argType reflect.Type // if set, means a return function expect this to be of the given type
 }
 
 func (this action) String() string {
@@ -118,10 +118,10 @@ func (this action) exec(p *pos) (any, *Error) {
 	}
 	if this.prod != "" {
 		alt := this.p.g.alts[this.prod]
-		if len(alt) == 0 {
+		if len(alt.prods) == 0 {
 			return nil, p.NewErrorf("no prod with name %q", this.prod)
 		}
-		return p.consumeAlt(alt)
+		return p.consumeProds(alt.prods...)
 	}
 	return nil, p.NewErrorf("empty action")
 }
@@ -134,7 +134,7 @@ func (this *Prod) Parse(fname string, in []byte, end *regexp.Regexp) (any, error
 		src:   &Src{bytes: in},
 		stats: &Stats{},
 	}
-	out, err := p.consumeAlt(alt{this})
+	out, err := p.consumeProds(this)
 	if err != nil {
 		return nil, err
 	}
@@ -363,8 +363,8 @@ func (this *Prod) build(term string) (int, error) {
 					}
 					p3.mustBuild("")
 					p3.Return(func() []any { return []any{} })
-					this.g.alts[repName] = alt{p1}
-					this.g.alts[repRep] = alt{p2, p3}
+					this.g.Alt(repName).prods = []*Prod{p1}
+					this.g.Alt(repRep).prods = []*Prod{p2, p3}
 
 					name = repName // replace name with repName to use the above
 
@@ -387,8 +387,16 @@ func (this *Prod) build(term string) (int, error) {
 func (this *Prod) verify() error {
 	for _, act := range this.actions {
 		if act.prod != "" {
-			if len(this.g.alts[act.prod]) == 0 {
+			if len(this.g.alts[act.prod].prods) == 0 {
 				return ctx.NewErrorf(nil, "production %q `%s` refers to empty %q", this.Name, this.Directive, act.prod)
+			}
+			if act.argType != nil {
+				for _, p := range this.g.alts[act.prod].prods {
+					if p.retType != nil && !p.retType.AssignableTo(act.argType) {
+						return ctx.NewErrorf(nil, "production at %s: action `%s` expect %v but %s returns %v",
+							this.src, act, act.argType, p.src, p.retType)
+					}
+				}
 			}
 		}
 	}
@@ -484,12 +492,18 @@ func (this *Prod) Return(action any) *Prod {
 	}
 	switch t.NumOut() {
 	case 1:
+		this.retType = t.Out(0)
 	case 2:
 		if t.Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
 			panic(fmt.Sprintf("%s: %v should return (X, error) or (X)", this.src, t))
 		}
+		this.retType = t.Out(0)
 	default:
 		panic(fmt.Sprintf("%s: %v should return (X, error) or (X)", this.src, t))
+	}
+	for i := 0; i < t.NumIn(); i++ {
+		// set the expected type in the action
+		this.actions[i].argType = t.In(i)
 	}
 	// TODO: test out either (X, error) or (X)
 

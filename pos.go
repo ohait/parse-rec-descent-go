@@ -173,13 +173,13 @@ func (this *pos) pop() {
 // try to consume each of the alternatives in the given order
 // first that succeed is returned
 // if none succeed the first error is returned
-func (this *pos) consumeAlt(alt alt) (any, *Error) {
+func (this *pos) consumeProds(prods ...*Prod) (any, *Error) {
 	this.stats.Alternations++
-	switch len(alt) {
+	switch len(prods) {
 	case 0:
 		panic("no alternatives") // Verify() woudl have catched this
 	case 1:
-		prod := alt[0]
+		prod := prods[0]
 		p := *this
 		p.commit = false
 		p.push("")
@@ -190,7 +190,7 @@ func (this *pos) consumeAlt(alt alt) (any, *Error) {
 	default:
 	}
 	var errs []*Error
-	for n, prod := range alt {
+	for n, prod := range prods {
 		p := *this
 		p.commit = false
 		p.push(fmt.Sprintf("%s/%d", prod.Name, n))

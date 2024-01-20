@@ -73,7 +73,7 @@ func TestGrammar(t *testing.T) {
 
 	test.NoError(t, g.Verify())
 
-	t.Logf("lit: %+v", g.alts["lit"][0])
+	t.Logf("lit: %+v", g.alts["lit"].prods[0])
 
 	{
 		out, _, err := g.Parse("expr", []byte("1+2"))

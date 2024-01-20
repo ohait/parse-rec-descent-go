@@ -20,7 +20,7 @@ type Grammar struct {
 	// Trailing regexp
 	End *regexp.Regexp
 
-	alts map[string]alt
+	alts map[string]*Alts
 	Log  func(f string, args ...any)
 
 	Stats struct {
@@ -49,7 +49,7 @@ func (this *Grammar) Dump() string {
 	var list []string
 	for _, name := range keys {
 		alt := this.alts[name]
-		for _, p := range alt {
+		for _, p := range alt.prods {
 			list = append(list, fmt.Sprintf("%s: %s", name, p.Directive))
 		}
 	}
@@ -60,46 +60,19 @@ var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
 var CommentsAndWhitespaces = regexp.MustCompile(`(\s|//[^\n]*\n?)*`)
 
 // return the productions for the given name (can be empty)
-func (this *Grammar) Alt(name string) Alts {
-	return Alts{this, name}
-}
-
-type Alts struct {
-	*Grammar
-	Name string
-}
-
-// Add a production to the given list
-func (this Alts) Add(directives string, fn any) *Prod {
-	if this.Log != nil {
-		this.Log("adding %s: %s", this.Name, directives)
+func (this *Grammar) Alt(name string) *Alts {
+	if this.alts == nil {
+		this.alts = map[string]*Alts{}
 	}
-	if this.Grammar.alts == nil {
-		this.Grammar.alts = map[string]alt{}
+	a := this.alts[name]
+	if a == nil {
+		a = &Alts{
+			Grammar: this,
+			Name:    name,
+		}
+		this.alts[name] = a
 	}
-	this.Stats.Productions++
-	_, file, line, _ := runtime.Caller(1)
-	file = filepath.Base(file)
-	p := &Prod{
-		g:         this.Grammar,
-		Name:      this.Name,
-		Directive: directives,
-		src:       fmt.Sprintf("%s:%d", file, line),
-	}
-	_, err := p.build("")
-	if err != nil {
-		log.Errorf(nil, "can't create prod %q: %v", this.Name, err)
-		panic(err)
-	}
-	list := append(this.alts[this.Name], p)
-	this.alts[this.Name] = list
-	if len(list) == 1 {
-		this.Stats.Alternations++
-	}
-	if fn == nil {
-		return p
-	}
-	return p.Return(fn)
+	return a
 }
 
 // Add a new production with the given name and directive
@@ -114,7 +87,7 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		this.Log("adding %s: %s", name, directives)
 	}
 	if this.alts == nil {
-		this.alts = map[string]alt{}
+		this.alts = map[string]*Alts{}
 	}
 	this.Stats.Productions++
 	_, file, line, _ := runtime.Caller(1)
@@ -130,11 +103,7 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		log.Errorf(nil, "can't create prod %q: %v", name, err)
 		panic(err)
 	}
-	list := append(this.alts[name], p)
-	this.alts[name] = list
-	if len(list) == 1 {
-		this.Stats.Alternations++
-	}
+	this.Alt(name).append(p)
 	return p
 }
 
@@ -144,7 +113,7 @@ func (this *Grammar) Verify() error {
 		//if this.Log != nil {
 		//	this.Log("build[%q]", name)
 		//}
-		for _, p := range alt {
+		for _, p := range alt.prods {
 			err := p.verify()
 			if err != nil {
 				return ctx.NewErrorf(nil, "%s: %s: %v", name, p.Directive, err)
@@ -166,7 +135,7 @@ func (this *Grammar) Analyze() {
 	})
 	for _, name := range names {
 		srcs := []string{}
-		for _, p := range this.alts[name] {
+		for _, p := range this.alts[name].prods {
 			srcs = append(srcs, p.src)
 		}
 		this.Log("%q %.2f (%s)", name, w[name], strings.Join(srcs, " "))
@@ -188,7 +157,7 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 		src:   &Src{bytes: text},
 		stats: &s,
 	}
-	out, err := p.consumeAlt(this.alts[prodName])
+	out, err := p.consumeProds(this.alts[prodName].prods...)
 
 	if err != nil {
 		return out, s, err
