@@ -37,10 +37,10 @@ func TestManualAssoc(t *testing.T) {
 		}
 		return op, nil
 	})
-	g.Add("add_", `/[\+\-]/ lit add_`).Return(func(op string, lit any, extra []BinOp) any {
+	g.Add("add_", `/[\+\-]/ lit add_`).Return(func(op string, lit any, extra []BinOp) []BinOp {
 		return append([]BinOp{{Op: op, Right: lit}}, extra...)
 	})
-	g.Add("add_", ``).Return(func() any { return nil })
+	g.Add("add_", ``).Return(func() []BinOp { return nil })
 
 	g.Add("lit", `/\d+/`).Return(func(v string) any { return Lit{v} })
 

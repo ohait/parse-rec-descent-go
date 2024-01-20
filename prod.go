@@ -501,11 +501,17 @@ func (this *Prod) Return(action any) *Prod {
 	default:
 		panic(fmt.Sprintf("%s: %v should return (X, error) or (X)", this.src, t))
 	}
-	for i := 0; i < t.NumIn(); i++ {
-		// set the expected type in the action
-		this.actions[i].argType = t.In(i)
+
+	// set the expected type in the action
+	if wantPos {
+		for i := 1; i < t.NumIn(); i++ {
+			this.actions[i-1].argType = t.In(i)
+		}
+	} else {
+		for i := 0; i < t.NumIn(); i++ {
+			this.actions[i].argType = t.In(i)
+		}
 	}
-	// TODO: test out either (X, error) or (X)
 
 	this.ret = func(from int, p *pos, in []any) (any, error) {
 		if this.g.Log != nil {
