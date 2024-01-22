@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -82,7 +83,7 @@ func (this *Grammar) Alt(name string) *Alts {
 // panics if anything is wrong (you normally don't want to handle the error, since can be seen as a compile time error)
 
 // deprecated: use Grammar{}.Alt(name).Add(directive, func(...))
-func (this *Grammar) Add(name string, directives string) *Prod {
+func (this *Grammar) Add(name string, directives string, extra ...any) *Prod {
 	if this.Log != nil {
 		this.Log("adding %s: %s", name, directives)
 	}
@@ -104,6 +105,21 @@ func (this *Grammar) Add(name string, directives string) *Prod {
 		panic(err)
 	}
 	this.Alt(name).append(p)
+	switch len(extra) {
+	case 0:
+		switch len(p.actions) {
+		case 0:
+			p.retType = reflect.TypeOf(nil)
+		case 1:
+			p.retType = p.actions[0].p.retType
+		default:
+			p.retType = reflect.TypeOf([]any{})
+		}
+	case 1:
+		return p.Return(extra[0])
+	default:
+		panic("unsupported")
+	}
 	return p
 }
 

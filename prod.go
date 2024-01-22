@@ -502,14 +502,14 @@ func (this *Prod) Return(action any) *Prod {
 		panic(fmt.Sprintf("%s: %v should return (X, error) or (X)", this.src, t))
 	}
 
-	// set the expected type in the action
+	j := 0
 	if wantPos {
-		for i := 1; i < t.NumIn(); i++ {
-			this.actions[i-1].argType = t.In(i)
-		}
-	} else {
-		for i := 0; i < t.NumIn(); i++ {
-			this.actions[i].argType = t.In(i)
+		j = 1
+	}
+	for i, act := range this.actions {
+		if !act.silent {
+			this.actions[i].argType = t.In(j)
+			j++
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 
 func TestType(t *testing.T) {
 	var g Grammar
-	g.Alt("foo").Add(`bar cuz`, func(bar, cuz string) string {
+	g.Alt("foo").Add(`bar "x" cuz`, func(bar, cuz string) string {
 		return bar + " " + cuz
 	})
 	g.Alt("bar").Add(`/\w+/`, func(s string) string {
