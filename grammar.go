@@ -3,7 +3,6 @@ package parse
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -107,6 +106,7 @@ func (this *Grammar) Add(name string, directives string, extra ...any) *Prod {
 	this.Alt(name).append(p)
 	switch len(extra) {
 	case 0:
+		/* DO NOT CHECK
 		switch len(p.actions) {
 		case 0:
 			p.retType = reflect.TypeOf(nil)
@@ -115,6 +115,7 @@ func (this *Grammar) Add(name string, directives string, extra ...any) *Prod {
 		default:
 			p.retType = reflect.TypeOf([]any{})
 		}
+		*/
 	case 1:
 		return p.Return(extra[0])
 	default:

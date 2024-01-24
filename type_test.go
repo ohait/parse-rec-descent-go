@@ -9,8 +9,8 @@ import (
 
 func TestType(t *testing.T) {
 	var g Grammar
-	g.Alt("foo").Add(`bar "x" cuz`, func(bar, cuz string) string {
-		return bar + " " + cuz
+	g.Alt("foo").Add(`bar /x/ + cuz`, func(bar, x string, cuz float64) string {
+		return bar
 	})
 	g.Alt("bar").Add(`/\w+/`, func(s string) string {
 		return s

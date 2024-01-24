@@ -393,8 +393,8 @@ func (this *Prod) verify() error {
 			if act.argType != nil {
 				for _, p := range this.g.alts[act.prod].prods {
 					if p.retType != nil && !p.retType.AssignableTo(act.argType) {
-						return ctx.NewErrorf(nil, "production at %s: action `%s` expect %v but %s returns %v",
-							this.src, act, act.argType, p.src, p.retType)
+						return ctx.NewErrorf(nil, "production %q at %s: action `%s` expect %v but %s returns %v",
+							this.Name, this.src, act, act.argType, p.src, p.retType)
 					}
 				}
 			}
