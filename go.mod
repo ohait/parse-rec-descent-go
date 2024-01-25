@@ -1,6 +1,6 @@
 module github.com/ohait/parse-rec-descent-go
 
-go 1.20
+go 1.21
 
 require github.com/Aize-Public/forego v0.0.0-20240123165927-2ab5a1b299b2
 
