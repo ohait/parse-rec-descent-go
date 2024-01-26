@@ -13,6 +13,7 @@ import (
 	"github.com/Aize-Public/forego/ctx"
 	"github.com/Aize-Public/forego/ctx/log"
 	"github.com/Aize-Public/forego/utils/lists"
+	"github.com/Aize-Public/forego/utils/maps"
 )
 
 type Grammar struct {
@@ -140,25 +141,6 @@ func (this *Grammar) Verify() error {
 	return nil
 }
 
-func (this *Grammar) Analyze() {
-	w := map[string]float64{}
-	names := []string{}
-	for name, alt := range this.alts {
-		names = append(names, name)
-		w[name] = alt.weight(8)
-	}
-	lists.SortFunc(names, func(n string) float64 {
-		return -w[n]
-	})
-	for _, name := range names {
-		srcs := []string{}
-		for _, p := range this.alts[name].prods {
-			srcs = append(srcs, p.src)
-		}
-		this.Log("%q %.2f (%s)", name, w[name], strings.Join(srcs, " "))
-	}
-}
-
 func (this *Grammar) Parse(prodName string, text []byte) (any, Stats, error) {
 	return this.ParseFile(prodName, "", text)
 }
@@ -174,7 +156,11 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 		src:   &Src{bytes: text},
 		stats: &s,
 	}
-	out, err := p.consumeProds(this.alts[prodName].prods...)
+	alt := this.alts[prodName]
+	if alt == nil {
+		return nil, s, ctx.NewErrorf(nil, "no prod named %q", prodName)
+	}
+	out, err := p.consumeProds(alt.prods...)
 
 	if err != nil {
 		return out, s, err
@@ -192,4 +178,42 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 	this.Stats.ParseElapsed += dt
 	s.ParseTime = dt
 	return out, s, nil
+}
+
+func (this *Grammar) Analyze() {
+	for _, alt := range this.alts {
+		alt.cost = 0.0
+	}
+	for i := 0; i < 8; i++ {
+		for _, alt := range this.alts {
+			w := 0.0
+			for _, p := range alt.prods {
+				for _, a := range p.actions {
+					if a.commit {
+						break
+					}
+					if a.prod != "" {
+						pw := 0.8 * this.alts[a.prod].cost
+						if pw < 0.1 {
+							pw = 0.1
+						}
+						w += pw
+					} else {
+						w += 1 // cost 1 for simple regex
+					}
+				}
+			}
+			alt.cost = w
+		}
+	}
+	alts := maps.Pairs(this.alts).Values()
+	lists.SortFunc(alts, func(a *Alts) float64 {
+		return -a.cost
+	})
+	if len(alts) > 10 {
+		alts = alts[10:]
+	}
+	for _, a := range alts {
+		log.Infof(nil, "%q %.3f", a.Name, a.cost)
+	}
 }
