@@ -3,7 +3,7 @@ package parse_test
 import (
 	"testing"
 
-	"github.com/Aize-Public/forego/test"
+	"github.com/ohait/forego/test"
 	"github.com/ohait/parse-rec-descent-go"
 )
 

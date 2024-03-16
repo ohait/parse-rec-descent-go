@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Aize-Public/forego/test"
+	"github.com/ohait/forego/test"
 )
 
 type Op interface {

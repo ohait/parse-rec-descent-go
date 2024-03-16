@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Aize-Public/forego/ctx"
-	"github.com/Aize-Public/forego/enc"
+	"github.com/ohait/forego/ctx"
+	"github.com/ohait/forego/enc"
 )
 
 type Pos struct {
@@ -18,6 +18,8 @@ type Pos struct {
 	File string
 	Src  *Src
 }
+
+func (p Pos) P() Pos { return p }
 
 func NewPos(filename string, in []byte) Pos {
 	return Pos{

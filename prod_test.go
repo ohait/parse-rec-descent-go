@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Aize-Public/forego/test"
+	"github.com/ohait/forego/test"
 )
 
 func TestRegex(t *testing.T) {
-	c := test.Context(t)
+	//c := test.Context(t)
 	{
 		var g Grammar
 		p := Prod{
@@ -25,12 +25,12 @@ func TestRegex(t *testing.T) {
 		}
 		out, err := p.actions[0].exec(&pos)
 		test.NoError(t, err)
-		test.EqualsJSON(c, `foo`, out)
+		test.EqualsJSON(t, `foo`, out)
 	}
 }
 
 func TestText(t *testing.T) {
-	c := test.Context(t)
+	//c := test.Context(t)
 	{
 		var g Grammar
 		p := Prod{
@@ -47,7 +47,7 @@ func TestText(t *testing.T) {
 		}
 		out, err := p.actions[0].exec(&pos)
 		test.NoError(t, err)
-		test.EqualsJSON(c, `foo`, out)
+		test.EqualsJSON(t, `foo`, out)
 	}
 }
 
@@ -113,7 +113,7 @@ func TestNoAction(t *testing.T) {
 }
 
 func TestSpace(t *testing.T) {
-	c := test.Context(t)
+	//c := test.Context(t)
 	{
 		g := Grammar{
 			End: Whitespaces,
@@ -122,7 +122,7 @@ func TestSpace(t *testing.T) {
 		g.Add("word", `/\w+/`).WS = Whitespaces
 		out, _, err := g.Parse("main", []byte("  foo\n\tfoo\n"))
 		test.NoError(t, err)
-		test.EqualsJSON(c, []any{"foo", "foo"}, out)
+		test.EqualsJSON(t, []any{"foo", "foo"}, out)
 	}
 	{
 		g := Grammar{
@@ -135,7 +135,7 @@ func TestSpace(t *testing.T) {
 		g.Add("word", `/\w+/`).WS = CommentsAndWhitespaces
 		out, _, err := g.Parse("main", []byte("1 // ignore\n\t2\n 3//"))
 		test.NoError(t, err)
-		test.EqualsJSON(c, []any{"1", "2", "3"}, out)
+		test.EqualsJSON(t, []any{"1", "2", "3"}, out)
 	}
 }
 
@@ -209,7 +209,7 @@ func TestNegative(t *testing.T) {
 }
 
 func TestAssocSimple(t *testing.T) {
-	c := test.Context(t)
+	//c := test.Context(t)
 	var g Grammar
 	g.Log = t.Logf
 	g.Add("ident", `/[a-zA-Z]\w+/`).Return(func(s string) string {
@@ -221,11 +221,11 @@ func TestAssocSimple(t *testing.T) {
 	t.Logf("%s", g.Dump())
 	out, _, err := g.Parse("list", []byte(`list: adam john`))
 	test.NoError(t, err)
-	test.EqualsJSON(c, `["adam","john"]`, out)
+	test.EqualsJSON(t, `["adam","john"]`, out)
 }
 
 func TestAssocSep(t *testing.T) {
-	c := test.Context(t)
+	//c := test.Context(t)
 	var g Grammar
 	g.Log = t.Logf
 	g.Add("ident", `/[a-zA-Z]\w+/`).Return(func(s string) string {
@@ -237,5 +237,5 @@ func TestAssocSep(t *testing.T) {
 	t.Logf("%s", g.Dump())
 	out, _, err := g.Parse("list", []byte(`list: adam, john ,luke`))
 	test.NoError(t, err)
-	test.EqualsJSON(c, `["adam","john","luke"]`, out)
+	test.EqualsJSON(t, `["adam","john","luke"]`, out)
 }

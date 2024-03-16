@@ -10,10 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Aize-Public/forego/ctx"
-	"github.com/Aize-Public/forego/ctx/log"
-	"github.com/Aize-Public/forego/utils/lists"
-	"github.com/Aize-Public/forego/utils/maps"
+	"github.com/ohait/forego/ctx"
+	"github.com/ohait/forego/ctx/log"
 )
 
 type Grammar struct {
@@ -81,8 +79,6 @@ func (this *Grammar) Alt(name string) *Alts {
 // otherwise return the only element
 // returns a production that can further be tweaked, adding a Return() action which override the above, and changing the whitespace
 // panics if anything is wrong (you normally don't want to handle the error, since can be seen as a compile time error)
-
-// deprecated: use Grammar{}.Alt(name).Add(directive, func(...))
 func (this *Grammar) Add(name string, directives string, extra ...any) *Prod {
 	if this.Log != nil {
 		this.Log("adding %s: %s", name, directives)
@@ -178,42 +174,4 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 	this.Stats.ParseElapsed += dt
 	s.ParseTime = dt
 	return out, s, nil
-}
-
-func (this *Grammar) Analyze() {
-	for _, alt := range this.alts {
-		alt.cost = 0.0
-	}
-	for i := 0; i < 8; i++ {
-		for _, alt := range this.alts {
-			w := 0.0
-			for _, p := range alt.prods {
-				for _, a := range p.actions {
-					if a.commit {
-						break
-					}
-					if a.prod != "" {
-						pw := 0.8 * this.alts[a.prod].cost
-						if pw < 0.1 {
-							pw = 0.1
-						}
-						w += pw
-					} else {
-						w += 1 // cost 1 for simple regex
-					}
-				}
-			}
-			alt.cost = w
-		}
-	}
-	alts := maps.Pairs(this.alts).Values()
-	lists.SortFunc(alts, func(a *Alts) float64 {
-		return -a.cost
-	})
-	if len(alts) > 10 {
-		alts = alts[10:]
-	}
-	for _, a := range alts {
-		log.Infof(nil, "%q %.3f", a.Name, a.cost)
-	}
 }

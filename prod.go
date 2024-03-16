@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Aize-Public/forego/ctx"
+	"github.com/ohait/forego/ctx"
 )
 
 type Prod struct {
@@ -363,7 +363,8 @@ func (this *Prod) build(term string) (int, error) {
 func (this *Prod) verify() error {
 	for _, act := range this.actions {
 		if act.prod != "" {
-			if len(this.g.alts[act.prod].prods) == 0 {
+			alt := this.g.alts[act.prod]
+			if alt == nil || len(alt.prods) == 0 {
 				return ctx.NewErrorf(nil, "production %q `%s` refers to empty %q", this.Name, this.Directive, act.prod)
 			}
 			if act.argType != nil {

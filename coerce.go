@@ -3,7 +3,7 @@ package parse
 import (
 	"reflect"
 
-	"github.com/Aize-Public/forego/ctx"
+	"github.com/ohait/forego/ctx"
 )
 
 // coerce the given value to the given type
