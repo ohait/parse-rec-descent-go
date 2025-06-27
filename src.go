@@ -30,5 +30,5 @@ func (this *Src) Line(offset int) int {
 		offset -= l
 		line++
 	}
-	return line // out of bounds
+	return len(this.linesLength) // clamp to last line
 }
