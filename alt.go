@@ -14,7 +14,6 @@ type Alts struct {
 	Name    string
 	prods   []*Prod
 	retType reflect.Type
-	cost    float64
 }
 
 // Add a production to the given list
