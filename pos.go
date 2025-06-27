@@ -151,7 +151,7 @@ func (this *pos) ConsumeRE(re *regexp.Regexp, negative bool) (string, *Error) {
 		return "", this.NewErrorf("expected /%v/ got %q", re, this.Rem(80))
 	}
 	if m[0] != 0 {
-		panic("re must match from the beginnin")
+		panic("re must match from the beginning")
 	}
 	out := this.src.bytes[this.at : this.at+m[1]]
 	if negative {
@@ -179,7 +179,7 @@ func (this *pos) consumeProds(prods ...*Prod) (any, *Error) {
 	this.stats.Alternations++
 	switch len(prods) {
 	case 0:
-		panic("no alternatives") // Verify() woudl have catched this
+		panic("no alternatives") // Verify() would have caught this
 	case 1:
 		prod := prods[0]
 		p := *this
