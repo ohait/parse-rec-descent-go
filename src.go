@@ -17,13 +17,18 @@ func (this *Src) Line(offset int) int {
 		for i, l := range lines {
 			lengths[i] = len(l)
 		}
+		for i := 0; i < len(lengths)-1; i++ {
+			lengths[i]++ // account for '\n'
+		}
 		this.linesLength = lengths
 	}
-	for i, l := range this.linesLength {
-		offset -= l
-		if offset < 0 {
-			return i
+	line := 1
+	for _, l := range this.linesLength {
+		if offset < l {
+			return line
 		}
+		offset -= l
+		line++
 	}
-	return len(this.linesLength) // out of bounds
+	return len(this.linesLength) // clamp to last line
 }
