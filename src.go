@@ -13,11 +13,11 @@ func (this *Src) Line(offset int) int {
 	}
 	if this.linesLength == nil {
 		lines := bytes.Split(this.bytes, []byte{'\n'})
-		lenghts := make([]int, len(lines))
+		lengths := make([]int, len(lines))
 		for i, l := range lines {
-			lenghts[i] = len(l)
+			lengths[i] = len(l)
 		}
-		this.linesLength = lenghts
+		this.linesLength = lengths
 	}
 	for i, l := range this.linesLength {
 		offset -= l
