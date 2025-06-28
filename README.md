@@ -329,5 +329,9 @@ Parses the given `src` using the prod named `prod`.
 
 The `filename` is passed along on all the `Return()` actions in the `Pos{}`: it's only useful when multiple files are given
 
-Returns the last Return function called, and statistics on the parsing
+Returns the value produced by the last `Return()` function executed,
+along with a `parse.Stats` structure describing how many
+alternations were tried, how much input was backtracked and the time
+spent parsing. The final return value is an error, which is nil when
+the input was parsed successfully and completely.
 
