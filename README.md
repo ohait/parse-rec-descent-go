@@ -3,7 +3,7 @@ A runtime recursive descendant parser inspired by Parse::RecDescent but in Go
 
 It allows for building parser dynamically, with a quasi-BNF syntax:
 
-```goo
+```go
 import parse "github.com/ohait/parse-rec-descent-go"
 
 var g parse.Grammar
