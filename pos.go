@@ -126,7 +126,7 @@ func (this *pos) IgnoreRE(re *regexp.Regexp, negative bool) error {
 		if negative {
 			return nil
 		}
-		//return ctx.NewErrorf(nil, "expected /%v/", re)
+		// return ctx.NewErrorf(nil, "expected /%v/", re)
 		return fmt.Errorf("❌ expected /%v/", re)
 	}
 	if negative {
@@ -151,11 +151,11 @@ func (this *pos) ConsumeRE(re *regexp.Regexp, negative bool) (string, *Error) {
 		return "", this.NewErrorf("expected /%v/ got %q", re, this.Rem(80))
 	}
 	if m[0] != 0 {
-		panic("re must match from the beginning")
+		panic("re must match from the beginning: " + re.String())
 	}
 	out := this.src.bytes[this.at : this.at+m[1]]
 	if negative {
-		//this.at += m[1]
+		// this.at += m[1]
 		this.Log("❌ NEG AHEAD %q", out)
 		return "", this.NewErrorf("unwanted /%v/", re)
 	} else {
@@ -168,6 +168,7 @@ func (this *pos) ConsumeRE(re *regexp.Regexp, negative bool) (string, *Error) {
 func (this *pos) push(n string) {
 	this.stack = append(this.stack, n)
 }
+
 func (this *pos) pop() {
 	this.stack = this.stack[0 : len(this.stack)-1]
 }
@@ -226,7 +227,7 @@ func (this *pos) consumeProds(prods ...*Prod) (any, *Error) {
 func (this *pos) NewErrorf(f string, args ...any) *Error {
 	return &Error{
 		err: fmt.Errorf(f, args...),
-		//err: ctx.NewErrorf(nil, f, args...),
+		// err: ctx.NewErrorf(nil, f, args...),
 		at:     this.at,
 		commit: this.commit,
 	}
@@ -238,8 +239,10 @@ type Error struct {
 	commit bool
 }
 
-var _ json.Marshaler = &Error{}
-var _ enc.Marshaler = &Error{}
+var (
+	_ json.Marshaler = &Error{}
+	_ enc.Marshaler  = &Error{}
+)
 
 func (this Error) Error() string {
 	return fmt.Sprintf("%v at %d", this.err, this.at)

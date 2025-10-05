@@ -15,7 +15,6 @@ import (
 )
 
 type Grammar struct {
-
 	// Trailing regexp
 	End *regexp.Regexp
 
@@ -55,8 +54,10 @@ func (this *Grammar) Dump() string {
 	return strings.Join(list, "\n") + "\n"
 }
 
-var Whitespaces = regexp.MustCompile(`[\s\n\r]*`)
-var CommentsAndWhitespaces = regexp.MustCompile(`(\s|//[^\n]*\n?)*`)
+var (
+	Whitespaces            = regexp.MustCompile(`^[\s\n\r]*`)
+	CommentsAndWhitespaces = regexp.MustCompile(`^(\s|//[^\n]*\n?)*`)
+)
 
 // return the productions for the given name (can be empty)
 func (this *Grammar) Alt(name string) *Alts {
@@ -79,7 +80,7 @@ func (this *Grammar) Alt(name string) *Alts {
 // otherwise return the only element
 // returns a production that can further be tweaked, adding a Return() action which override the above, and changing the whitespace
 // panics if anything is wrong (you normally don't want to handle the error, since can be seen as a compile time error)
-func (this *Grammar) Add(name string, directives string, extra ...any) *Prod {
+func (this *Grammar) Add(name, directives string, extra ...any) *Prod {
 	if this.Log != nil {
 		this.Log("adding %s: %s", name, directives)
 	}
@@ -143,7 +144,7 @@ func (this *Grammar) Parse(prodName string, text []byte) (any, Stats, error) {
 
 // parse the given text using the named alternative
 // check for unparsed text
-func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (any, Stats, error) {
+func (this *Grammar) ParseFile(prodName, fileName string, text []byte) (any, Stats, error) {
 	var s Stats
 	t0 := time.Now()
 	p := pos{
@@ -157,7 +158,6 @@ func (this *Grammar) ParseFile(prodName string, fileName string, text []byte) (a
 		return nil, s, ctx.NewErrorf(nil, "no prod named %q", prodName)
 	}
 	out, err := p.consumeProds(alt.prods...)
-
 	if err != nil {
 		return out, s, err
 	}

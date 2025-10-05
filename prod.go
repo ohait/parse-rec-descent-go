@@ -156,7 +156,7 @@ func (this *Prod) mustBuild(term string) int {
 }
 
 func (this *Prod) build(term string) (int, error) {
-	//log.Printf("prod[%q]...", this.Name)
+	// log.Printf("prod[%q]...", this.Name)
 	this.Directive = strings.TrimSpace(this.Directive)
 	if this.Directive == "" {
 		//this.act = func(p *Pos) ([]any, error) {
@@ -169,7 +169,7 @@ func (this *Prod) build(term string) (int, error) {
 	silent := false
 	d := this.Directive
 	for {
-		//log.Debugf(nil, "REM: `%s`", d)
+		// log.Debugf(nil, "REM: `%s`", d)
 		switch term {
 		case "":
 			if d == "" {
@@ -183,7 +183,7 @@ func (this *Prod) build(term string) (int, error) {
 		if len(d) == 0 {
 			return 0, io.EOF
 		}
-		//log.Printf("parsing %q", d)
+		// log.Printf("parsing %q", d)
 		switch d[0] {
 
 		case '~':
@@ -228,7 +228,7 @@ func (this *Prod) build(term string) (int, error) {
 				return len(this.Directive) - len(d), nil
 			}
 			d = d[l:]
-			//log.Printf("prod[%q]: /%s/", this.Name, re)
+			// log.Printf("prod[%q]: /%s/", this.Name, re)
 			this.actions = append(this.actions, action{
 				p:        this,
 				re:       re,
@@ -251,7 +251,7 @@ func (this *Prod) build(term string) (int, error) {
 			name := m[1]
 
 			if len(d) > 2 {
-				//log.Debugf(nil, "REPEAT: `%s`", d)
+				// log.Debugf(nil, "REPEAT: `%s`", d)
 				switch d[0:1] {
 				case "(":
 					d = d[1:]
@@ -272,7 +272,7 @@ func (this *Prod) build(term string) (int, error) {
 
 					rep := d[0:ct]
 					d = d[ct+1:]
-					//log.Debugf(nil, "REPEAT: %+v", temp)
+					// log.Debugf(nil, "REPEAT: %+v", temp)
 					var sepAction *action
 					switch len(temp.actions) {
 					case 1: // simple
@@ -320,7 +320,7 @@ func (this *Prod) build(term string) (int, error) {
 					p2.actions = append(p2.actions, action{p: p2, prod: repRep})
 
 					if sepAction != nil && !sepAction.silent {
-						p2.Return(func(sep any, l any, r []any) []any {
+						p2.Return(func(sep, l any, r []any) []any {
 							return append([]any{sep, l}, r...)
 						})
 					} else {
@@ -346,7 +346,6 @@ func (this *Prod) build(term string) (int, error) {
 
 				default:
 				}
-
 			}
 			this.actions = append(this.actions, action{
 				p:        this,
@@ -423,9 +422,8 @@ func (this *Prod) exec(p *pos) (any, *Error) {
 		default:
 			return list, err
 		}
-
 	} else {
-		//if this.G.Log != nil { this.G.Log("ret(%v, %v)", in, out) }
+		// if this.G.Log != nil { this.G.Log("ret(%v, %v)", in, out) }
 		out, err := this.ret(from, p, list)
 		if err != nil {
 			return out, &Error{err, p.at, p.commit}
@@ -508,13 +506,13 @@ func (this *Prod) Return(action any) *Prod {
 			if err != nil {
 				panic(fmt.Sprintf("%s: can't coerce arg #%d: %v", this.src, len(list), err))
 			}
-			//if this.g.Log != nil { this.g.Log("ARG: %v", v) }
+			// if this.g.Log != nil { this.g.Log("ARG: %v", v) }
 			list = append(list, v)
 		}
 		if len(list) != t.NumIn() {
 			panic(fmt.Sprintf("%s: action `%v` expects %d arguments, but got %+v (wantPos: %v)", this.src, t, t.NumOut(), len(list), wantPos))
 		}
-		//log.Printf("CALL[%v](%v)", f, list)
+		// log.Printf("CALL[%v](%v)", f, list)
 		out := f.Call(list)
 		switch len(out) {
 		case 1:
