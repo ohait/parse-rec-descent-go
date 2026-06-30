@@ -12,7 +12,7 @@ func coerce(in reflect.Value, t reflect.Type) (reflect.Value, error) {
 	if !in.IsValid() {
 		return reflect.New(t).Elem(), nil // return zero value
 	}
-	if in.IsZero() {
+	if in.IsZero() && t.Kind() != reflect.Interface {
 		return reflect.New(t).Elem(), nil // return zero value
 	}
 	if in.Kind() == reflect.Interface {
